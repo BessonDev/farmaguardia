@@ -60,6 +60,12 @@ Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSit
         </label>
       </div>
 
+      <label class="field">
+        <span>URL de imagen</span>
+        <input name="imagen_url" type="url" value={farmacia.imagenUrl ?? ''} placeholder="https://ejemplo.com/foto.jpg" />
+        <span style="display: block; font-size: 11px; color: var(--fg-muted); margin-top: 2px;">URL pública de la foto de la farmacia. Se muestra en la landing.</span>
+      </label>
+
       <div style="margin-top: 16px; display: flex; gap: 8px;">
         <button type="submit" class="primary">Guardar cambios</button>
         <a href="/admin/farmacias" class="secondary">Cancelar</a>

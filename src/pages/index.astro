@@ -3,6 +3,7 @@ import Layout from '~/layouts/Layout.astro';
 import CardFarmacia from '~/components/CardFarmacia.astro';
 import ListaProximosTurnos from '~/components/ListaProximosTurnos.astro';
 import SinTurno from '~/components/SinTurno.astro';
+import ReportarModal from '~/components/ReportarModal.astro';
 import { getTurnoActivo, getProximosTurnos } from '~/lib/turno-actual';
 
 const turno = await getTurnoActivo();
@@ -42,4 +43,6 @@ const saludo = ahora.getHours() < 12 ? 'Buenos días' : ahora.getHours() < 18 ? 
       </footer>
     </div>
   </div>
+
+  {turno && <ReportarModal turnoId={turno.turnoId} farmaciaNombre={turno.farmacia.nombre} />}
 </Layout>
