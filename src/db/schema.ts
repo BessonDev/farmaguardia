@@ -88,6 +88,31 @@ export const loginAttempts = sqliteTable(
   ],
 );
 
+export const plantillas = sqliteTable('plantillas', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  nombre: text('nombre').notNull(),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const plantillaSlots = sqliteTable(
+  'plantilla_slots',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    plantillaId: integer('plantilla_id')
+      .notNull()
+      .references(() => plantillas.id, { onDelete: 'cascade' }),
+    posicion: integer('posicion').notNull(),
+    farmaciaId: integer('farmacia_id')
+      .notNull()
+      .references(() => farmacias.id),
+  },
+  (table) => [
+    index('idx_slots_plantilla').on(table.plantillaId, table.posicion),
+  ],
+);
+
 export type Farmacia = typeof farmacias.$inferSelect;
 export type NuevoTurno = typeof turnos.$inferInsert;
 export type Turno = typeof turnos.$inferSelect;
+export type Plantilla = typeof plantillas.$inferSelect;
+export type PlantillaSlot = typeof plantillaSlots.$inferSelect;

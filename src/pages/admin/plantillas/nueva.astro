@@ -1,0 +1,114 @@
+---
+import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
+import { db, schema } from '~/db/client';
+import { cookies, makeCsrfToken } from '~/lib/auth';
+import { eq } from 'drizzle-orm';
+
+const farmacias = db.select().from(schema.farmacias).where(eq(schema.farmacias.activa, 1)).orderBy(schema.farmacias.nombre).all();
+
+const csrfToken = makeCsrfToken();
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+
+const error = Astro.url.searchParams.get('error');
+---
+
+<LayoutAdmin title="Nueva plantilla">
+  <h2>Nueva plantilla de rotación</h2>
+
+  <div class="card" style="max-width: 640px;">
+    <p style="font-size: 14px; color: var(--fg-muted); margin: 0 0 16px;">
+      Definí el orden de rotación de las farmacias. Después podés aplicar esta plantilla a un rango de fechas para generar todos los turnos automáticamente.
+    </p>
+
+    {error === 'required' && <div class="alert danger">El nombre es obligatorio.</div>}
+    {error === 'noslots' && <div class="alert danger">Agregá al menos una farmacia a la rotación.</div>}
+    {error === 'csrf' && <div class="alert danger">Error de seguridad. Intentalo de nuevo.</div>}
+
+    <form method="post" action="/admin/api/plantillas" id="plantilla-form">
+      <input type="hidden" name="_csrf" value={csrfToken} />
+
+      <label class="field">
+        <span>Nombre de la plantilla *</span>
+        <input name="nombre" required placeholder="Ej: Rotación Julio 2026" />
+      </label>
+
+      <div style="margin-top: 16px;">
+        <span style="display: block; font-weight: 600; margin-bottom: 8px;">Orden de rotación</span>
+        <div id="slots-container">
+          <div class="slot-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+            <span style="min-width: 24px; font-weight: 600; color: var(--fg-muted);">1</span>
+            <select name="farmacia_id_1" required style="flex: 1;">
+              <option value="">Seleccionar farmacia</option>
+              {farmacias.map((f) => (
+                <option value={f.id}>{f.nombre}</option>
+              ))}
+            </select>
+            <button type="button" class="danger" style="font-size: 12px; padding: 2px 8px;" onclick="this.closest('.slot-row').remove(); actualizarNumeros();">X</button>
+          </div>
+        </div>
+        <button type="button" class="secondary" style="font-size: 13px; margin-top: 4px;" onclick="agregarSlot()">+ Agregar farmacia</button>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 8px;">
+        <button type="submit" class="primary">Crear plantilla</button>
+        <a href="/admin/plantillas" class="secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</LayoutAdmin>
+
+<script define:vars={{ farmacias }}>
+function agregarSlot() {
+  const container = document.getElementById('slots-container');
+  const rows = container.querySelectorAll('.slot-row');
+  const idx = rows.length + 1;
+
+  const div = document.createElement('div');
+  div.className = 'slot-row';
+  div.style.cssText = 'display: flex; gap: 8px; align-items: center; margin-bottom: 6px;';
+
+  const span = document.createElement('span');
+  span.style.cssText = 'min-width: 24px; font-weight: 600; color: var(--fg-muted);';
+  span.textContent = String(idx);
+
+  const select = document.createElement('select');
+  select.name = `farmacia_id_${idx}`;
+  select.required = true;
+  select.style.flex = '1';
+
+  const emptyOpt = document.createElement('option');
+  emptyOpt.value = '';
+  emptyOpt.textContent = 'Seleccionar farmacia';
+  select.appendChild(emptyOpt);
+
+  for (const f of farmacias) {
+    const opt = document.createElement('option');
+    opt.value = String(f.id);
+    opt.textContent = f.nombre;
+    select.appendChild(opt);
+  }
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'danger';
+  btn.style.cssText = 'font-size: 12px; padding: 2px 8px;';
+  btn.textContent = 'X';
+  btn.onclick = function () { this.closest('.slot-row').remove(); actualizarNumeros(); };
+
+  div.appendChild(span);
+  div.appendChild(select);
+  div.appendChild(btn);
+  container.appendChild(div);
+}
+
+function actualizarNumeros() {
+  const container = document.getElementById('slots-container');
+  const rows = container.querySelectorAll('.slot-row');
+  rows.forEach((row, i) => {
+    const num = i + 1;
+    row.querySelector('span').textContent = String(num);
+    const sel = row.querySelector('select');
+    sel.name = `farmacia_id_${num}`;
+  });
+}
+</script>
