@@ -7,6 +7,8 @@ type FarmaciaSeed = {
   sector: string;
   telefono: string | null;
   whatsapp: string | null;
+  latitud: number;
+  longitud: number;
 };
 
 const FARMACIAS: FarmaciaSeed[] = [
@@ -16,6 +18,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Andrés Eloy Blanco',
     telefono: '+584166857492',
     whatsapp: '+584166857492',
+    latitud: 5.6542,
+    longitud: -67.6183,
   },
   {
     nombre: 'Farma Amazonas (Sede Principal)',
@@ -23,6 +27,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Perimetral',
     telefono: '+582485210171',
     whatsapp: '+582485210171',
+    latitud: 5.6568,
+    longitud: -67.6352,
   },
   {
     nombre: 'Farma Amazonas (Sucursal)',
@@ -30,6 +36,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Centro',
     telefono: '+582485210171',
     whatsapp: '+582485210171',
+    latitud: 5.6602,
+    longitud: -67.6249,
   },
   {
     nombre: 'Farmacia Orinoco',
@@ -37,6 +45,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Orinoco',
     telefono: '+582485212425',
     whatsapp: '+582485212425',
+    latitud: 5.6627,
+    longitud: -67.6298,
   },
   {
     nombre: 'Farmacia Doña Carmen',
@@ -44,6 +54,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Orinoco',
     telefono: '+582485210305',
     whatsapp: '+582485210305',
+    latitud: 5.6641,
+    longitud: -67.6315,
   },
   {
     nombre: 'Farmacia El Carmen',
@@ -51,6 +63,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Centro',
     telefono: '+582485214109',
     whatsapp: '+582485214109',
+    latitud: 5.6595,
+    longitud: -67.6235,
   },
   {
     nombre: 'Farma Abastos Amazonas',
@@ -58,6 +72,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Centro',
     telefono: null,
     whatsapp: null,
+    latitud: 5.6610,
+    longitud: -67.6255,
   },
   {
     nombre: 'Farmacia Todo-Farma Amazonas, C.A.',
@@ -65,6 +81,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Aramare',
     telefono: null,
     whatsapp: null,
+    latitud: 5.6675,
+    longitud: -67.6280,
   },
   {
     nombre: 'Farmacia Aramare C.A.',
@@ -72,6 +90,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Orinoco',
     telefono: null,
     whatsapp: null,
+    latitud: 5.6633,
+    longitud: -67.6305,
   },
   {
     nombre: 'Farmacia Autana',
@@ -79,6 +99,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Centro',
     telefono: null,
     whatsapp: null,
+    latitud: 5.6615,
+    longitud: -67.6240,
   },
   {
     nombre: 'Farmacia La Suprema, C.A.',
@@ -86,6 +108,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Centro',
     telefono: null,
     whatsapp: null,
+    latitud: 5.6608,
+    longitud: -67.6262,
   },
   {
     nombre: 'Farmacia "La Paz"',
@@ -93,6 +117,8 @@ const FARMACIAS: FarmaciaSeed[] = [
     sector: 'Centro',
     telefono: null,
     whatsapp: null,
+    latitud: 5.6590,
+    longitud: -67.6250,
   },
 ];
 
@@ -111,6 +137,8 @@ async function seed() {
         sector: f.sector,
         telefono: f.telefono,
         whatsapp: f.whatsapp,
+        latitud: f.latitud,
+        longitud: f.longitud,
         activa: 1,
       })),
     )

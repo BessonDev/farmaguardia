@@ -7,25 +7,39 @@ import { getTurnoActivo, getProximosTurnos } from '~/lib/turno-actual';
 
 const turno = await getTurnoActivo();
 const proximos = await getProximosTurnos(new Date(), 7);
+const ahora = new Date();
+const saludo = ahora.getHours() < 12 ? 'Buenos días' : ahora.getHours() < 18 ? 'Buenas tardes' : 'Buenas noches';
 ---
 
 <Layout>
-  <main class="mx-auto max-w-xl px-4 py-8 sm:py-12">
+  <div class="mx-auto max-w-xl px-4 py-6 sm:py-10">
     <header class="mb-8 flex items-center justify-between">
-      <h1 class="text-xl font-bold">
-        <span class="text-[var(--color-accent)]">Farma</span>Guardia
-      </h1>
-      <p class="text-xs text-[var(--color-fg-muted)]">Puerto Ayacucho</p>
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">
+          <span class="text-[var(--color-accent)]">Farma</span>Guardia
+        </h1>
+        <p class="text-xs text-[var(--color-fg-muted)] mt-0.5">
+          {saludo} · {ahora.toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}
+        </p>
+      </div>
+      <a href="/admin" class="shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elev)] px-3 py-2 text-xs font-medium text-[var(--color-fg-muted)] transition-all hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]">
+        Admin
+      </a>
     </header>
 
     <div class="space-y-6">
       {turno ? <CardFarmacia turno={turno} /> : <SinTurno />}
+
       <ListaProximosTurnos turnos={proximos} />
 
-      <footer class="pt-4 text-center text-xs text-[var(--color-fg-muted)]">
-        <p>¿Información incorrecta? Reportala al admin desde el panel.</p>
-        <p class="mt-1">FarmaGuardia · Hecho con cuidado para Puerto Ayacucho</p>
+      <footer class="pt-4 text-center">
+        <p class="text-xs text-[var(--color-fg-muted)]">
+          Hecho con ❤️ para Puerto Ayacucho, Amazonas, Venezuela
+        </p>
+        <p class="text-[11px] text-[var(--color-fg-muted)] mt-1">
+          ¿Información incorrecta? Reportala desde el <a href="/admin" class="underline hover:text-[var(--color-accent)] transition-colors">panel admin</a>.
+        </p>
       </footer>
     </div>
-  </main>
+  </div>
 </Layout>

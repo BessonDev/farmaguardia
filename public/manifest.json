@@ -1,0 +1,16 @@
+{
+  "name": "FarmaGuardia",
+  "short_name": "FarmaGuardia",
+  "description": "Farmacias de turno en Puerto Ayacucho, Amazonas, Venezuela",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    }
+  ]
+}

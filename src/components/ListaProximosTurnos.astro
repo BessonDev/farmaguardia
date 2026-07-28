@@ -1,25 +1,76 @@
 ---
-import { formatFechaMiniCaracas } from '../lib/tz';
+import { utcToCaracas, formatHoraCaracas } from '../lib/tz';
+import { format, isToday, isTomorrow, isSameDay, addDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface Props {
-  turnos: Array<{ farmacia: { nombre: string }; inicioUtc: string; turnoId: number }>;
+  turnos: Array<{ farmacia: { nombre: string }; inicioUtc: string; finUtc: string; turnoId: number }>;
 }
 
 const { turnos } = Astro.props;
+
+function formatDateLabel(utcIso: string): { label: string; sub: string; highlight: 'today' | 'tomorrow' | null } {
+  const d = utcToCaracas(utcIso);
+
+  if (isToday(d)) return { label: 'Hoy', sub: format(d, "d 'de' MMMM", { locale: es }), highlight: 'today' };
+  if (isTomorrow(d)) return { label: 'Mañana', sub: format(d, "d 'de' MMMM", { locale: es }), highlight: 'tomorrow' };
+
+  return {
+    label: format(d, 'EEEE', { locale: es }),
+    sub: format(d, "d 'de' MMMM", { locale: es }),
+    highlight: null,
+  };
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 ---
 
-<section class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-elev)] p-6">
-  <h2 class="text-lg font-semibold mb-4">Próximos turnos</h2>
+<section class="animate-fade-in-up rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-elev)] p-6" style="animation-delay: 0.2s;">
+  <h2 class="text-lg font-semibold mb-5 flex items-center gap-2">
+    <span class="text-xl">📅</span>
+    Próximos turnos
+  </h2>
+
   {turnos.length === 0 ? (
-    <p class="text-sm text-[var(--color-fg-muted)]">No hay turnos programados próximamente.</p>
+    <div class="flex flex-col items-center gap-3 py-6 text-center">
+      <span class="text-3xl">🗓️</span>
+      <p class="text-sm text-[var(--color-fg-muted)]">No hay turnos programados próximamente.</p>
+    </div>
   ) : (
-    <ul class="space-y-3">
-      {turnos.map((t) => (
-        <li class="flex items-center justify-between text-sm">
-          <span class="text-[var(--color-fg-muted)]">{formatFechaMiniCaracas(t.inicioUtc)}</span>
-          <span class="font-medium">{t.farmacia.nombre}</span>
-        </li>
-      ))}
-    </ul>
+    <div class="space-y-3">
+      {turnos.map((t, i) => {
+        const { label, sub, highlight } = formatDateLabel(t.inicioUtc);
+        return (
+          <div
+            class="group flex items-center gap-4 rounded-xl border border-transparent bg-[var(--color-bg)] p-4 transition-all duration-200 hover:border-[var(--color-border)] hover:shadow-md hover:shadow-black/5"
+            style={`animation: fade-in 0.4s ease-out ${0.3 + i * 0.08}s both;`}
+          >
+            <div class={`shrink-0 flex flex-col items-center min-w-[64px] py-1 px-2 rounded-lg ${
+              highlight === 'today'
+                ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]'
+                : highlight === 'tomorrow'
+                  ? 'bg-blue-500/10 text-blue-400'
+                  : 'text-[var(--color-fg-muted)]'
+            }`}>
+              <span class={`text-xs font-bold uppercase tracking-wider ${
+                highlight === 'today' ? 'text-[var(--color-accent)]' : highlight === 'tomorrow' ? 'text-blue-400' : ''
+              }`}>
+                {highlight === 'today' ? 'HOY' : label}
+              </span>
+              <span class="text-[11px] mt-0.5">{sub}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-sm group-hover:text-[var(--color-accent)] transition-colors">{t.farmacia.nombre}</p>
+              <p class="text-xs text-[var(--color-fg-muted)] mt-0.5">
+                {capitalize(format(utcToCaracas(t.inicioUtc), 'EEEE', { locale: es }))} {format(utcToCaracas(t.inicioUtc), "d 'de' MMMM · HH:mm", { locale: es })} — {formatHoraCaracas(t.finUtc)}
+              </p>
+            </div>
+            <span class="shrink-0 text-base opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </div>
+        );
+      })}
+    </div>
   )}
 </section>
