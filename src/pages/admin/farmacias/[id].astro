@@ -1,0 +1,69 @@
+---
+import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
+import { db, schema } from '~/db/client';
+import { cookies, makeCsrfToken } from '~/lib/auth';
+import { eq } from 'drizzle-orm';
+
+const id = Number(Astro.params.id);
+const farmacia = db.select().from(schema.farmacias).where(eq(schema.farmacias.id, id)).get();
+
+if (!farmacia) {
+  return Astro.redirect('/admin/farmacias');
+}
+
+const csrfToken = makeCsrfToken();
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+---
+
+<LayoutAdmin title={`Editar: ${farmacia.nombre}`}>
+  <h2>Editar: {farmacia.nombre}</h2>
+
+  <div class="card" style="max-width: 640px;">
+    <form method="post" action={`/admin/api/farmacias/${id}`}>
+      <input type="hidden" name="_csrf" value={csrfToken} />
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Nombre *</span>
+          <input name="nombre" required value={farmacia.nombre} />
+        </label>
+        <label class="field">
+          <span>Sector</span>
+          <input name="sector" value={farmacia.sector ?? ''} />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Dirección *</span>
+        <input name="direccion" required value={farmacia.direccion} />
+      </label>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Teléfono</span>
+          <input name="telefono" value={farmacia.telefono ?? ''} />
+        </label>
+        <label class="field">
+          <span>WhatsApp</span>
+          <input name="whatsapp" value={farmacia.whatsapp ?? ''} />
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Latitud</span>
+          <input name="latitud" type="number" step="any" value={farmacia.latitud ?? ''} />
+        </label>
+        <label class="field">
+          <span>Longitud</span>
+          <input name="longitud" type="number" step="any" value={farmacia.longitud ?? ''} />
+        </label>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; gap: 8px;">
+        <button type="submit" class="primary">Guardar cambios</button>
+        <a href="/admin/farmacias" class="secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</LayoutAdmin>

@@ -27,10 +27,10 @@ export const turnos = sqliteTable(
     notas: text('notas'),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   },
-  (t) => ({
-    rangoIdx: index('idx_turnos_rango').on(t.inicioUtc, t.finUtc),
-    farmaciaIdx: index('idx_turnos_farmacia').on(t.farmaciaId),
-  }),
+  (table) => [
+    index('idx_turnos_rango').on(table.inicioUtc, table.finUtc),
+    index('idx_turnos_farmacia').on(table.farmaciaId),
+  ],
 );
 
 export const anunciosTurno = sqliteTable(
@@ -48,9 +48,9 @@ export const anunciosTurno = sqliteTable(
     vigenteHastaUtc: text('vigente_hasta_utc').notNull(),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   },
-  (t) => ({
-    vigenciaIdx: index('idx_anuncios_vigencia').on(t.vigenteDesdeUtc, t.vigenteHastaUtc),
-  }),
+  (table) => [
+    index('idx_anuncios_vigencia').on(table.vigenteDesdeUtc, table.vigenteHastaUtc),
+  ],
 );
 
 export const reportes = sqliteTable(
@@ -63,9 +63,9 @@ export const reportes = sqliteTable(
     ipHash: text('ip_hash'),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   },
-  (t) => ({
-    fechaIdx: index('idx_reportes_fecha').on(t.createdAt),
-  }),
+  (table) => [
+    index('idx_reportes_fecha').on(table.createdAt),
+  ],
 );
 
 export const adminLog = sqliteTable('admin_log', {
@@ -83,9 +83,9 @@ export const loginAttempts = sqliteTable(
     exitoso: integer('exitoso').notNull().default(0),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   },
-  (t) => ({
-    ipFechaIdx: index('idx_login_attempts_ip_fecha').on(t.ip, t.createdAt),
-  }),
+  (table) => [
+    index('idx_login_attempts_ip_fecha').on(table.ip, table.createdAt),
+  ],
 );
 
 export type Farmacia = typeof farmacias.$inferSelect;

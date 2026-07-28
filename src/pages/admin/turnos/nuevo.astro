@@ -1,0 +1,64 @@
+---
+import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
+import { db, schema } from '~/db/client';
+import { cookies, makeCsrfToken } from '~/lib/auth';
+import { eq } from 'drizzle-orm';
+
+const farmacias = db.select().from(schema.farmacias).where(eq(schema.farmacias.activa, 1)).orderBy(schema.farmacias.nombre).all();
+
+const csrfToken = makeCsrfToken();
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+---
+
+<LayoutAdmin title="Nuevo turno">
+  <h2>Nuevo turno</h2>
+
+  <div class="card" style="max-width: 640px;">
+    <form method="post" action="/admin/api/turnos">
+      <input type="hidden" name="_csrf" value={csrfToken} />
+
+      <label class="field">
+        <span>Farmacia *</span>
+        <select name="farmacia_id" required>
+          <option value="">Seleccionar farmacia</option>
+          {farmacias.map((f) => (
+            <option value={f.id}>{f.nombre}</option>
+          ))}
+        </select>
+      </label>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Fecha de inicio *</span>
+          <input name="fecha_inicio" type="date" required />
+        </label>
+        <label class="field">
+          <span>Hora de inicio</span>
+          <input name="hora_inicio" type="time" value="08:00" />
+        </label>
+      </div>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Fecha de fin</span>
+          <input name="fecha_fin" type="date" />
+          <span style="display: block; font-size: 11px; color: var(--fg-muted); margin-top: 2px;">Dejá vacío para turno de 24h (día siguiente)</span>
+        </label>
+        <label class="field">
+          <span>Hora de fin</span>
+          <input name="hora_fin" type="time" value="08:00" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Notas</span>
+        <input name="notas" placeholder="Turno especial, feriado, etc." />
+      </label>
+
+      <div style="margin-top: 16px; display: flex; gap: 8px;">
+        <button type="submit" class="primary">Crear turno</button>
+        <a href="/admin/turnos" class="secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</LayoutAdmin>

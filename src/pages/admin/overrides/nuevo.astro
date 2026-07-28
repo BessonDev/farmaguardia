@@ -1,0 +1,74 @@
+---
+import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
+import { db, schema } from '~/db/client';
+import { cookies, makeCsrfToken } from '~/lib/auth';
+import { eq, gte } from 'drizzle-orm';
+import { formatFechaMiniCaracas } from '~/lib/tz';
+
+// Solo mostrar turnos futuros para override
+const turnosActivos = db
+  .select({
+    id: schema.turnos.id,
+    inicioUtc: schema.turnos.inicioUtc,
+    finUtc: schema.turnos.finUtc,
+    farmacia: schema.farmacias,
+  })
+  .from(schema.turnos)
+  .innerJoin(schema.farmacias, eq(schema.turnos.farmaciaId, schema.farmacias.id))
+  .where(gte(schema.turnos.finUtc, new Date().toISOString()))
+  .orderBy(schema.turnos.inicioUtc)
+  .all();
+
+const farmacias = db.select().from(schema.farmacias).where(eq(schema.farmacias.activa, 1)).orderBy(schema.farmacias.nombre).all();
+
+const csrfToken = makeCsrfToken();
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+
+const turnoIdParam = Astro.url.searchParams.get('turno_id');
+---
+
+<LayoutAdmin title="Nuevo override">
+  <h2>🚨 Override de emergencia</h2>
+
+  <div class="card" style="max-width: 640px;">
+    <p style="font-size: 14px; color: var(--fg-muted); margin: 0 0 16px;">
+      Reemplaza temporalmente la farmacia que está de turno por otra. El override está vigente desde el momento que lo creás hasta el fin del turno original.
+    </p>
+
+    <form method="post" action="/admin/api/overrides">
+      <input type="hidden" name="_csrf" value={csrfToken} />
+
+      <label class="field">
+        <span>Turno a reemplazar *</span>
+        <select name="turno_id" required>
+          <option value="">Seleccionar turno</option>
+          {turnosActivos.map((t) => (
+            <option value={t.id} selected={t.id === Number(turnoIdParam)}>
+              {t.farmacia.nombre} — {formatFechaMiniCaracas(t.inicioUtc)} → {formatFechaMiniCaracas(t.finUtc)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Farmacia sustituta *</span>
+        <select name="farmacia_id" required>
+          <option value="">Seleccionar farmacia</option>
+          {farmacias.map((f) => (
+            <option value={f.id}>{f.nombre}</option>
+          ))}
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Motivo *</span>
+        <input name="motivo" required placeholder="Cerró por inventario, emergencia, etc." />
+      </label>
+
+      <div style="margin-top: 16px; display: flex; gap: 8px;">
+        <button type="submit" class="primary" style="background: var(--danger); color: white;">Activar override</button>
+        <a href="/admin/overrides" class="secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</LayoutAdmin>

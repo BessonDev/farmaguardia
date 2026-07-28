@@ -1,0 +1,68 @@
+---
+import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
+import { db, schema } from '~/db/client';
+import { cookies, makeCsrfToken } from '~/lib/auth';
+import { formatFechaMiniCaracas, formatHoraCaracas } from '~/lib/tz';
+import { eq, desc } from 'drizzle-orm';
+
+const overrides = db
+  .select({
+    id: schema.anunciosTurno.id,
+    vigenteDesdeUtc: schema.anunciosTurno.vigenteDesdeUtc,
+    vigenteHastaUtc: schema.anunciosTurno.vigenteHastaUtc,
+    motivo: schema.anunciosTurno.motivo,
+    sustituta: schema.farmacias,
+    turnoId: schema.anunciosTurno.turnoId,
+  })
+  .from(schema.anunciosTurno)
+  .innerJoin(schema.farmacias, eq(schema.anunciosTurno.farmaciaSustitutaId, schema.farmacias.id))
+  .orderBy(desc(schema.anunciosTurno.createdAt))
+  .all();
+
+const csrfToken = makeCsrfToken();
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+---
+
+<LayoutAdmin title="Overrides">
+  <div class="toolbar">
+    <h2 style="margin: 0; flex: 1;">Overrides de emergencia</h2>
+    <a href="/admin/overrides/nuevo" class="primary" style="background: var(--danger); color: white;">
+      🚨 Nuevo override
+    </a>
+  </div>
+
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <table>
+      <thead>
+        <tr>
+          <th>Farm. sustituta</th>
+          <th>Vigente desde</th>
+          <th>Vigente hasta</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {overrides.map((o) => (
+          <tr>
+            <td style="font-weight: 600;">{o.sustituta.nombre}</td>
+            <td>
+              <div>{formatFechaMiniCaracas(o.vigenteDesdeUtc)}</div>
+              <div style="font-size: 12px; color: var(--fg-muted);">{formatHoraCaracas(o.vigenteDesdeUtc)}</div>
+            </td>
+            <td>
+              <div>{formatFechaMiniCaracas(o.vigenteHastaUtc)}</div>
+              <div style="font-size: 12px; color: var(--fg-muted);">{formatHoraCaracas(o.vigenteHastaUtc)}</div>
+            </td>
+            <td style="font-size: 13px;">{o.motivo ?? '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {overrides.length === 0 && (
+    <div class="card" style="text-align: center; color: var(--fg-muted);">
+      No hay overrides activos.
+    </div>
+  )}
+</LayoutAdmin>
