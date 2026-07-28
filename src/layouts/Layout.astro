@@ -1,0 +1,39 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = 'FarmaGuardia · Farmacias de turno en Puerto Ayacucho',
+  description = 'Consulta en tiempo real qué farmacia está de turno hoy en Puerto Ayacucho, Estado Amazonas, Venezuela.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <meta name="geo.region" content="VE-X" />
+    <meta name="geo.placename" content="Puerto Ayacucho, Amazonas, Venezuela" />
+    <meta name="geo.position" content="5.6635;-67.6244" />
+    <meta name="ICBM" content="5.6635, -67.6244" />
+
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_VE" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

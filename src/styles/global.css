@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-bg: #ffffff;
+  --color-bg-elev: #f8fafc;
+  --color-fg: #0f172a;
+  --color-fg-muted: #64748b;
+  --color-accent: #16a34a;
+  --color-accent-fg: #ffffff;
+  --color-danger: #dc2626;
+  --color-border: #e2e8f0;
+}
+
+:root.dark {
+  --color-bg: #0a0a0a;
+  --color-bg-elev: #171717;
+  --color-fg: #f5f5f5;
+  --color-fg-muted: #a3a3a3;
+  --color-accent: #22c55e;
+  --color-accent-fg: #0a0a0a;
+  --color-danger: #ef4444;
+  --color-border: #262626;
+}
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-badge {
+  animation: pulse-badge 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

@@ -1,0 +1,25 @@
+---
+import { formatFechaMiniCaracas } from '../lib/tz';
+
+interface Props {
+  turnos: Array<{ farmacia: { nombre: string }; inicioUtc: string; turnoId: number }>;
+}
+
+const { turnos } = Astro.props;
+---
+
+<section class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-elev)] p-6">
+  <h2 class="text-lg font-semibold mb-4">Próximos turnos</h2>
+  {turnos.length === 0 ? (
+    <p class="text-sm text-[var(--color-fg-muted)]">No hay turnos programados próximamente.</p>
+  ) : (
+    <ul class="space-y-3">
+      {turnos.map((t) => (
+        <li class="flex items-center justify-between text-sm">
+          <span class="text-[var(--color-fg-muted)]">{formatFechaMiniCaracas(t.inicioUtc)}</span>
+          <span class="font-medium">{t.farmacia.nombre}</span>
+        </li>
+      ))}
+    </ul>
+  )}
+</section>

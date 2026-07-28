@@ -1,0 +1,31 @@
+---
+import Layout from '~/layouts/Layout.astro';
+import CardFarmacia from '~/components/CardFarmacia.astro';
+import ListaProximosTurnos from '~/components/ListaProximosTurnos.astro';
+import SinTurno from '~/components/SinTurno.astro';
+import { getTurnoActivo, getProximosTurnos } from '~/lib/turno-actual';
+
+const turno = await getTurnoActivo();
+const proximos = await getProximosTurnos(new Date(), 7);
+---
+
+<Layout>
+  <main class="mx-auto max-w-xl px-4 py-8 sm:py-12">
+    <header class="mb-8 flex items-center justify-between">
+      <h1 class="text-xl font-bold">
+        <span class="text-[var(--color-accent)]">Farma</span>Guardia
+      </h1>
+      <p class="text-xs text-[var(--color-fg-muted)]">Puerto Ayacucho</p>
+    </header>
+
+    <div class="space-y-6">
+      {turno ? <CardFarmacia turno={turno} /> : <SinTurno />}
+      <ListaProximosTurnos turnos={proximos} />
+
+      <footer class="pt-4 text-center text-xs text-[var(--color-fg-muted)]">
+        <p>¿Información incorrecta? Reportala al admin desde el panel.</p>
+        <p class="mt-1">FarmaGuardia · Hecho con cuidado para Puerto Ayacucho</p>
+      </footer>
+    </div>
+  </main>
+</Layout>
