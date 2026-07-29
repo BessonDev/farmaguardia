@@ -35,7 +35,8 @@ const error = Astro.url.searchParams.get('error');
 
   {error === 'csrf' && <div class="alert danger">Error de seguridad. Intentalo de nuevo.</div>}
 
-  <div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card" style="padding: 0;">
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -62,6 +63,7 @@ const error = Astro.url.searchParams.get('error');
         ))}
       </tbody>
     </table>
+    </div>
   </div>
 
   {plantillas.length === 0 && (

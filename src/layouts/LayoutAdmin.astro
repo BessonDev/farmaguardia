@@ -192,6 +192,18 @@ const links = [
         display: flex; gap: 12px; margin-bottom: 16px;
         flex-wrap: wrap; align-items: center;
       }
+      .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      @media (max-width: 768px) {
+        main.content { padding: 16px; }
+        main.content h2 { font-size: 20px; margin-bottom: 16px; }
+        .toolbar { flex-direction: column; align-items: stretch; }
+        .toolbar a, .toolbar button { text-align: center; }
+        .stat .value { font-size: 20px; }
+        .form-grid { grid-template-columns: 1fr !important; }
+      }
     </style>
   </head>
   <body>

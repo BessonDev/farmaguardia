@@ -20,7 +20,8 @@ Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSit
     <a href="/admin/farmacias/nueva" class="primary">+ Nueva farmacia</a>
   </div>
 
-  <div class="card" style="padding: 0; overflow: hidden;">
+  <div class="card" style="padding: 0;">
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -62,6 +63,7 @@ Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSit
         ))}
       </tbody>
     </table>
+    </div>
   </div>
 
   {farmacias.length === 0 && (
