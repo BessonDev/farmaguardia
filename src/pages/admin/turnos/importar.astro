@@ -3,6 +3,7 @@ import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
 import { db, schema } from '~/db/client';
 import { cookies, makeCsrfToken } from '~/lib/auth';
 import { parse } from 'csv-parse/sync';
+import * as XLSX from 'xlsx';
 import { eq } from 'drizzle-orm';
 
 const csrfToken = makeCsrfToken();
@@ -29,12 +30,24 @@ if (Astro.request.method === 'POST') {
   const file = formData.get('file') as File | null;
 
   if (file && file.size > 0) {
-    const csvText = await file.text();
-    const records: string[][] = parse(csvText, {
-      skip_empty_lines: true,
-      relax_column_count: true,
-      delimiter: [',', ';', '\t'],
-    });
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    let records: string[][] = [];
+
+    if (isExcel) {
+      const buf = Buffer.from(await file.arrayBuffer());
+      const wb = XLSX.read(buf, { type: 'buffer' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      records = aoa.map((r) => r.map((c) => String(c ?? '')));
+    } else {
+      const csvText = await file.text();
+      records = parse(csvText, {
+        skip_empty_lines: true,
+        relax_column_count: true,
+        delimiter: [',', ';', '\t'],
+      });
+    }
 
     // Headers skip
     const rows = records.slice(1);
@@ -126,7 +139,7 @@ if (Astro.request.method === 'POST') {
         <input type="hidden" name="_csrf" value={csrfToken} />
         <label class="field">
           <span>Archivo CSV</span>
-          <input type="file" name="file" accept=".csv" required />
+          <input type="file" name="file" accept=".csv,.xlsx,.xls" required />
         </label>
         <div style="margin-top: 16px; display: flex; gap: 8px;">
           <button type="submit" class="primary">Previsualizar</button>
@@ -203,12 +216,15 @@ if (Astro.request.method === 'POST') {
     <p style="margin: 0; font-size: 13px; color: var(--fg-muted);">
       La primera fila debe contener los encabezados (se ignoran).<br />
       <strong>Columnas:</strong> farmacia_nombre, fecha_inicio (YYYY-MM-DD HH:mm), fecha_fin (YYYY-MM-DD HH:mm, opcional), notas (opcional)<br />
-      <strong>Separadores:</strong> coma, punto y coma o tabulación.<br />
+      <strong>Formatos:</strong> CSV (.csv) o Excel (.xlsx y .xls).<br />
       <strong>Ejemplo:</strong>
     </p>
     <pre style="margin: 8px 0 0; padding: 12px; background: var(--bg); border-radius: 8px; font-size: 12px; overflow-x: auto;">
 farmacia_nombre,fecha_inicio,fecha_fin,notas
 "Farma Amazonas (Sede Principal)",2026-08-15 08:00,2026-08-16 08:00,
 "Farmacia Orinoco",2026-08-16 08:00,2026-08-17 08:00,"Feriado"</pre>
+    <a href="/admin/api/turnos/plantilla" class="secondary" style="margin-top: 12px; display: inline-flex; gap: 6px;">
+      📥 Descargar plantilla CSV
+    </a>
   </div>
 </LayoutAdmin>

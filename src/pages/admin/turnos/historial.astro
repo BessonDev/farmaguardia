@@ -36,7 +36,7 @@ if (filterHasta) {
 
 const where = and(...conditions);
 
-const [[{ total }]] = db
+const [{ total }] = db
   .select({ total: count() })
   .from(schema.turnos)
   .where(where)
