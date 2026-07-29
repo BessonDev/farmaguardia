@@ -103,6 +103,12 @@ body {
   filter: invert(1) hue-rotate(180deg) saturate(0.5);
 }
 
+@media (max-width: 640px) {
+  .animate-fade-in { animation-duration: 0.25s; }
+  .animate-fade-in-up { animation-duration: 0.3s; }
+  .animate-scale-in { animation-duration: 0.2s; }
+}
+
 @media (prefers-color-scheme: light) {
   .map-container iframe {
     filter: none;
