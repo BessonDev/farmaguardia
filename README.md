@@ -2,7 +2,7 @@
 
 **Portal web de farmacias de turno** — Puerto Ayacucho, Estado Amazonas, Venezuela.
 
-Aplicación SSR moderna que muestra qué farmacia está de turno en tiempo real, con panel admin completo para gestión de turnos, plantillas de rotación, overrides de emergencia e importación por CSV/Excel.
+SSR moderno que muestra qué farmacia está de turno en tiempo real, con panel admin completo para gestión de turnos, plantillas de rotación, overrides de emergencia, importación CSV/Excel y notificaciones Telegram.
 
 ---
 
@@ -10,20 +10,22 @@ Aplicación SSR moderna que muestra qué farmacia está de turno en tiempo real,
 
 | | |
 |---|---|
-| ✅ | **Landing pública** con badge animado, mapa OSM embebido, próximos turnos en calendario |
-| ✅ | **Panel admin** con dashboard, CRUD de farmacias/turnos, historial paginado |
-| ✅ | **ChartBars** CSS-only — turnos por farmacia en últimos 30 días, cero dependencias |
-| ✅ | **Importación CSV/Excel** con preview y validación antes de insertar |
-| ✅ | **Plantillas de rotación** con slots configurables para generar turnos masivamente |
-| ✅ | **Overrides de emergencia** con vigencia por rango de fechas |
-| ✅ | **Autenticación segura** — argon2id, cookie firmada HMAC-SHA256, CSRF, rate limit |
-| ✅ | **Cambio de contraseña** desde el propio panel admin |
-| ✅ | **Notificaciones Telegram** cuando alguien reporta una farmacia |
-| ✅ | **Modo oscuro/claro** con persistencia en localStorage y sin flash |
-| ✅ | **PWA** — manifest.json + service worker offline básico |
-| ✅ | **Responsive** — sidebar con hamburguesa, animaciones adaptativas |
-| ✅ | **Zona horaria** — todo en UTC, conversión a America/Caracas solo en presentación |
-| ✅ | **Rate limiting** por IP en login (5/15min) y reportes públicos (3/hora) |
+| 🌐 **Landing pública** | Badge animado "Abierto", mapa OSM embebido, próximos turnos, fallback sin turno, modal de reporte |
+| 📊 **Dashboard admin** | Stats rápidas, turno activo, gráfico **ChartBars** (CSS-only, 0 deps) — turnos por farmacia últimos 30 días |
+| 🏪 **CRUD Farmacias** | Nombre, dirección, sector, coords GPS, teléfono, WhatsApp, imagen, activo/inactivo |
+| 📅 **CRUD Turnos** | Crear/editar/borrar, validación de solapamiento, enlace a Importar / Historial |
+| 📥 **Importar CSV/Excel** | Upload → parse → preview → batch insert. Plantilla descargable |
+| 📋 **Historial paginado** | Filtros por farmacia + rango fechas, 50/page, JOIN override |
+| 🔁 **Plantillas de rotación** | Slots configurables para generar turnos masivos |
+| ⚠️ **Overrides de emergencia** | Vigencia por rango de fechas, badge en landing y admin |
+| 🔐 **Auth segura** | argon2id + cookie HMAC-SHA256 + CSRF + rate limit IP (5/15min) |
+| 🔑 **Cambio de contraseña** | UI en `/admin/cambiar-password` |
+| 🤖 **Telegram Bot** | Config page en admin con estado, guía y botón de prueba |
+| 🌓 **Modo oscuro/claro** | System preference + localStorage, sin flash |
+| 📱 **PWA** | manifest.json + service worker offline básico |
+| 🕐 **Zona horaria** | Todo en UTC, conversión a America/Caracas solo en presentación |
+| 🚦 **Rate limiting** | Login 5/15min, reportes públicos 3/hora |
+| 📱 **Responsive** | Tablas con scroll horizontal, toolbar apilable, sidebar fluida sin overlap |
 
 ---
 
@@ -31,13 +33,12 @@ Aplicación SSR moderna que muestra qué farmacia está de turno en tiempo real,
 
 | Capa | Tecnología |
 |---|---|
-| **Framework** | [Astro 5](https://astro.build) — SSR con [Node adapter (standalone)](https://docs.astro.build/en/guides/integrations-guide/node/) |
+| **Framework** | [Astro 5](https://astro.build) SSR + [Node adapter standalone](https://docs.astro.build/en/guides/integrations-guide/node/) |
 | **Estilos** | [Tailwind CSS v4](https://tailwindcss.com) |
-| **Base de datos** | [SQLite](https://sqlite.org) via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
+| **BD** | [SQLite](https://sqlite.org) via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) |
 | **ORM** | [Drizzle ORM](https://orm.drizzle.team) |
-| **Autenticación** | [@node-rs/argon2](https://github.com/napi-rs/node-rs/tree/master/packages/argon2) + cookie firmada |
-| **CSV** | [csv-parse](https://adaltas.github.io/csv/parse/) |
-| **Excel** | [SheetJS (xlsx)](https://sheetjs.com) |
+| **Auth** | [@node-rs/argon2](https://github.com/napi-rs/node-rs/tree/master/packages/argon2) |
+| **CSV/Excel** | [csv-parse](https://adaltas.github.io/csv/parse/) + [SheetJS](https://sheetjs.com) |
 | **Tests** | [Vitest](https://vitest.dev) |
 
 ---
@@ -45,24 +46,14 @@ Aplicación SSR moderna que muestra qué farmacia está de turno en tiempo real,
 ## 🚀 Inicio rápido
 
 ```bash
-# 1. Clonar e instalar
 npm install
-
-# 2. Variables de entorno
 cp .env.example .env
-# Editar SESSION_SECRET con un string aleatorio
-
-# 3. Inicializar base de datos
 npm run db:migrate
 npm run db:seed
-
-# 4. Dev server
 npm run dev
 ```
 
-El seed crea un usuario admin por defecto: `admin` / `admin`.
-
-> **⚠️ Importante:** Cambiá la contraseña ni bien entres desde _Admin → Cambiar contraseña_.
+Seed: `admin` / `admin`. **Cambiá la contraseña ni bien entres.**
 
 ---
 
@@ -70,13 +61,13 @@ El seed crea un usuario admin por defecto: `admin` / `admin`.
 
 | Variable | Requerida | Descripción |
 |---|---|---|
-| `DATABASE_URL` | ✅ | Ruta al archivo `.db` (ej: `file:local.db`) |
-| `SESSION_SECRET` | ✅ | String aleatorio para firmar cookies de sesión |
-| `TZ=UTC` | ✅ | El servidor DEBE correr en UTC |
-| `TELEGRAM_BOT_TOKEN` | ❌ | Token del bot para notificaciones de reportes |
-| `TELEGRAM_CHAT_ID` | ❌ | Chat ID donde recibir las notificaciones |
-| `HOST` | ❌ | Host para producción (default: `0.0.0.0`) |
-| `PORT` | ❌ | Puerto para producción (default: `4321`) |
+| `DATABASE_URL` | ✅ | Ruta al `.db` (ej: `file:local.db`) |
+| `SESSION_SECRET` | ✅ | String aleatorio para cookies |
+| `TZ=UTC` | ✅ | Server DEBE correr en UTC |
+| `TELEGRAM_BOT_TOKEN` | ❌ | Token del bot de Telegram |
+| `TELEGRAM_CHAT_ID` | ❌ | Chat ID para notificaciones |
+| `HOST` | ❌ | Host producción (default: `0.0.0.0`) |
+| `PORT` | ❌ | Puerto producción (default: `4321`) |
 
 ---
 
@@ -84,53 +75,55 @@ El seed crea un usuario admin por defecto: `admin` / `admin`.
 
 | Comando | Descripción |
 |---|---|
-| `npm run dev` | Servidor dev en `localhost:4321` |
-| `npm run build` | Build de producción en `dist/` |
-| `npm run start` | Iniciar server de producción |
-| `npm test` | Ejecutar tests (Vitest) |
-| `npm run typecheck` | TypeScript check |
-| `npm run lint` | ESLint |
-| `npm run db:generate` | Generar migración desde schema |
-| `npm run db:migrate` | Aplicar migraciones pendientes |
-| `npm run db:seed` | Poblar DB con datos iniciales |
+| `npm run dev` | Dev server en `:4321` |
+| `npm run build` | Build producción |
+| `npm start` | Iniciar server producción |
+| `npm test` | Tests (Vitest) |
+| `npm run db:generate` | Generar migración |
+| `npm run db:migrate` | Aplicar migraciones |
+| `npm run db:seed` | Poblar DB |
 
 ---
 
-## 📁 Estructura del proyecto
+## 📁 Estructura
 
 ```
 src/
-├── components/        # Componentes reutilizables (CardFarmacia, ChartBars, ThemeToggle...)
-├── layouts/           # Layout público (Layout.astro) y admin (LayoutAdmin.astro)
-├── pages/             # Rutas SSR
-│   ├── index.astro    # Landing pública
-│   └── admin/         # Panel de administración
-│       ├── index.astro
-│       ├── login.astro / logout.astro
+├── components/        # CardFarmacia, ChartBars, ThemeToggle, etc.
+├── layouts/           # Layout público + LayoutAdmin
+├── pages/
+│   ├── index.astro    # Landing
+│   └── admin/
+│       ├── index.astro, login.ts, logout.ts
 │       ├── cambiar-password.astro
-│       ├── farmacias/
-│       ├── turnos/
-│       ├── plantillas/
-│       ├── overrides/
-│       ├── reportes/
+│       ├── telegram.astro
+│       ├── farmacias/, turnos/, plantillas/, overrides/
 │       └── api/       # Endpoints POST
-├── lib/               # Lógica de negocio
-│   ├── auth.ts        # Argon2, sesión, CSRF
-│   ├── tz.ts          # Zona horaria America/Caracas
-│   ├── turno-actual.ts
-│   ├── rate-limit.ts
-│   ├── audit.ts
-│   └── notificar.ts   # Telegram
+├── lib/
+│   ├── auth.ts, tz.ts, turno-actual.ts
+│   ├── rate-limit.ts, audit.ts, notificar.ts
 ├── db/
-│   ├── client.ts      # Conexión + schema export
-│   ├── schema.ts      # 9 tablas (Drizzle)
-│   ├── seed.ts        # 12 farmacias reales + admin
-│   └── migrations/    # Migraciones SQL
-├── middleware.ts       # Protección de rutas /admin/*
-├── styles/
-│   └── global.css     # Tailwind v4 + Inter + animaciones
-└── env.d.ts
+│   ├── client.ts, schema.ts (9 tablas), seed.ts
+│   └── migrations/
+├── middleware.ts
+└── styles/global.css
 ```
+
+---
+
+## 🗄️ Esquema de BD (9 tablas)
+
+| Tabla | Propósito |
+|---|---|
+| `usuarios` | Admin (username, password_hash argon2id) |
+| `farmacias` | 12 reales con GPS + tel. E.164 |
+| `turnos` | Turnos rotativos (inicio/fin UTC) |
+| `anuncios_turno` | Overrides con vigencia |
+| `plantillas` | Plantillas de rotación |
+| `plantilla_slots` | Slots: cada cuántos días, farmacia |
+| `reportes` | Reportes públicos |
+| `admin_log` | Auditoría de acciones |
+| `login_attempts` | Rate limit login |
 
 ---
 
@@ -138,20 +131,30 @@ src/
 
 | Ruta | Método | Descripción | Rate limit |
 |---|---|---|---|
-| `/` | GET | Landing pública con farmacia activa | — |
-| `/admin/api/reportar.ts` | POST | Reportar farmacia cerrada | 3/hora por IP |
+| `/` | GET | Landing pública | — |
+| `/api/reportar` | POST | Reportar farmacia cerrada | 3/hora/IP |
 
 ---
 
 ## 🧪 Tests
 
 ```bash
-npm test        # Todos los tests
-npm run vitest  # Watch mode
+npm test
 ```
+
+18 tests: 7 turno-actual + 11 auth.
+
+---
+
+## 🐳 Deploy (Dokploy)
+
+1. Push a GitHub
+2. Dokploy → New Project → Docker Compose → apunta al repo
+3. Variables de entorno en UI de Dokploy
+4. Dominio `farmaguardia.com` + Let's Encrypt SSL
 
 ---
 
 ## 📄 Licencia
 
-MIT
+MIT — Libre para usar, modificar y distribuir.
