@@ -35,10 +35,10 @@ Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSit
       <tbody>
         {farmacias.map((f) => (
           <tr>
-            <td>
-              <div style="font-weight: 600;">{f.nombre}</div>
-              <div style="font-size: 12px; color: var(--fg-muted);">{f.direccion}</div>
-            </td>
+              <td>
+                <div style="font-weight: 600; white-space: nowrap;">{f.nombre}</div>
+                <div style="font-size: 12px; color: var(--fg-muted);">{f.direccion}</div>
+              </td>
             <td>{f.sector ?? '—'}</td>
             <td>{f.telefono ?? <span style="color: var(--fg-muted);">—</span>}</td>
             <td>

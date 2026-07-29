@@ -77,21 +77,26 @@ const links = [
       @media (max-width: 768px) {
         .layout { grid-template-columns: 1fr; }
         nav.sidebar {
-          border-right: none;
-          border-bottom: 1px solid var(--border);
           position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-          padding: 12px 16px;
-          display: flex; align-items: center; gap: 12px;
-          flex-wrap: wrap;
+          padding: 10px 16px;
+          display: flex; align-items: center; gap: 8px;
+          border-bottom: 1px solid var(--border);
+          background: var(--bg-elev);
         }
-        nav.sidebar h1 { margin: 0; font-size: 16px; flex: 1; }
+        nav.sidebar h1 { margin: 0; font-size: 16px; flex: 1; min-width: 0; }
         nav.sidebar ul {
           display: none;
-          width: 100%; margin: 0;
+          position: fixed; top: 53px; left: 0; right: 0;
+          background: var(--bg-elev);
+          border-bottom: 1px solid var(--border);
+          padding: 8px 16px 16px;
+          z-index: 99;
+          box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+          margin: 0;
         }
         nav.sidebar ul.open { display: block; }
         nav.sidebar form { margin: 0; }
-        main.content { padding-top: 80px; }
+        main.content { padding-top: 56px; }
         .sidebar-toggle {
           display: flex !important;
         }
@@ -196,6 +201,8 @@ const links = [
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
       }
+      .table-wrap table { min-width: 650px; }
+      .table-wrap td:has(.badge) { white-space: nowrap; }
       @media (max-width: 768px) {
         main.content { padding: 16px; }
         main.content h2 { font-size: 20px; margin-bottom: 16px; }

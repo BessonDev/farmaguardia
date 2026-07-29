@@ -49,9 +49,9 @@ const error = Astro.url.searchParams.get('error');
       <tbody>
         {plantillas.map((p) => (
           <tr>
-            <td style="font-weight: 600;">{p.nombre}</td>
+            <td style="font-weight: 600; white-space: nowrap;">{p.nombre}</td>
             <td>{p.slots}</td>
-            <td style="color: var(--fg-muted); font-size: 13px;">{new Date(p.createdAt).toLocaleDateString()}</td>
+            <td style="color: var(--fg-muted); font-size: 13px; white-space: nowrap;">{new Date(p.createdAt).toLocaleDateString()}</td>
             <td style="display: flex; gap: 6px; justify-content: end;">
               <a href={`/admin/plantillas/aplicar?plantilla_id=${p.id}`} class="primary" style="font-size: 13px;">Aplicar</a>
               <form method="post" action={`/admin/plantillas/${p.id}/borrar`} style="display: inline;">

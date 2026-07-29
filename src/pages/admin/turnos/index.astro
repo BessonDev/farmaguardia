@@ -45,12 +45,12 @@ Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSit
       <tbody>
         {turnos.map((t) => (
           <tr>
-            <td style="font-weight: 600;">{t.farmacia.nombre}</td>
-            <td>
+            <td style="font-weight: 600; white-space: nowrap;">{t.farmacia.nombre}</td>
+            <td style="white-space: nowrap;">
               <div>{formatFechaMiniCaracas(t.inicioUtc)}</div>
               <div style="font-size: 12px; color: var(--fg-muted);">{formatHoraCaracas(t.inicioUtc)}</div>
             </td>
-            <td>
+            <td style="white-space: nowrap;">
               <div>{formatFechaMiniCaracas(t.finUtc)}</div>
               <div style="font-size: 12px; color: var(--fg-muted);">{formatHoraCaracas(t.finUtc)}</div>
             </td>

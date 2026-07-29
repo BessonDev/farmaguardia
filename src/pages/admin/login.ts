@@ -21,15 +21,18 @@ const LOGIN_HTML = (csrfToken: string, next: string, error: string | null, limit
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <title>Admin · FarmaGuardia</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: #0a0a0a; color: #f5f5f5; margin: 0;
-      min-height: 100dvh; display: grid; place-items: center;
+      min-height: 100dvh; min-height: 100svh;
+      display: grid; place-items: center;
+      padding: 16px;
     }
     .card {
       background: #171717; border: 1px solid #262626;
-      border-radius: 16px; padding: 32px;
-      width: min(360px, 92vw);
+      border-radius: 16px; padding: clamp(20px, 5vw, 32px);
+      width: 100%; max-width: 380px;
     }
     h1 { margin: 0 0 4px; font-size: 22px; }
     h1 span { color: #22c55e; }
