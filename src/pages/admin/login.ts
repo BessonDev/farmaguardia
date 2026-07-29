@@ -18,6 +18,7 @@ const LOGIN_HTML = (csrfToken: string, next: string, error: string | null, limit
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <title>Admin · FarmaGuardia</title>
   <style>
     body {
@@ -31,6 +32,7 @@ const LOGIN_HTML = (csrfToken: string, next: string, error: string | null, limit
       width: min(360px, 92vw);
     }
     h1 { margin: 0 0 4px; font-size: 22px; }
+    h1 span { color: #22c55e; }
     .sub { margin: 0 0 24px; font-size: 13px; color: #a3a3a3; }
     label { display: block; font-size: 13px; margin-bottom: 6px; color: #d4d4d4; }
     input[type="password"] {
@@ -55,7 +57,7 @@ const LOGIN_HTML = (csrfToken: string, next: string, error: string | null, limit
 </head>
 <body>
   <form class="card" method="post" action="/admin/login">
-    <h1>FarmaGuardia</h1>
+    <h1><span>Farma</span>Guardia</h1>
     <p class="sub">Panel de administración</p>
     <label for="password">Contraseña</label>
     <input id="password" name="password" type="password" autocomplete="current-password" required autofocus />
