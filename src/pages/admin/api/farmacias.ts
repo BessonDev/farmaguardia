@@ -29,6 +29,7 @@ export const POST: APIRoute = async ({ request, cookies: ctxCookies, redirect })
       whatsapp: String(formData.get('whatsapp') ?? '').trim() || null,
       latitud: parseFloat(formData.get('latitud') as string) || null,
       longitud: parseFloat(formData.get('longitud') as string) || null,
+      imagenUrl: String(formData.get('imagen_url') ?? '').trim() || null,
       activa: 1,
     })
     .returning()

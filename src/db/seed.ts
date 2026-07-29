@@ -1,5 +1,6 @@
 import { db, schema } from './client';
 import { turnoCaracas } from '../lib/tz';
+import { hashPassword } from '../lib/auth';
 
 type FarmaciaSeed = {
   nombre: string;
@@ -126,6 +127,15 @@ async function seed() {
   console.log('[seed] Limpiando tablas…');
   db.delete(schema.turnos).run();
   db.delete(schema.farmacias).run();
+  db.delete(schema.usuarios).run();
+
+  console.log('[seed] Insertando usuario admin…');
+  const adminHash = await hashPassword('admin');
+  db.insert(schema.usuarios)
+    .values({ username: 'admin', passwordHash: adminHash })
+    .onConflictDoNothing()
+    .run();
+  console.log('[seed] Usuario admin listo (password: admin).');
 
   console.log('[seed] Insertando farmacias…');
   const farmaciasInsertadas = db

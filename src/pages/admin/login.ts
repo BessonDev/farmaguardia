@@ -8,6 +8,8 @@ import {
 } from '~/lib/auth';
 import { getClientIp, isRateLimited, recordAttempt } from '~/lib/rate-limit';
 import { log } from '~/lib/audit';
+import { db, schema } from '~/db/client';
+import { eq } from 'drizzle-orm';
 
 export const prerender = false;
 
@@ -106,13 +108,13 @@ export const POST: APIRoute = async ({ request, cookies: ctxCookies, redirect })
     return redirect('/admin/login?error=csrf', 302);
   }
 
-  const hashStr = process.env.ADMIN_PASSWORD_HASH;
-  if (!hashStr) {
-    console.error('[admin] ADMIN_PASSWORD_HASH no está configurado');
+  const user = db.select().from(schema.usuarios).where(eq(schema.usuarios.username, 'admin')).get();
+  if (!user) {
+    console.error('[admin] No se encontró usuario admin en la DB');
     return redirect('/admin/login?error=config', 302);
   }
 
-  const ok = await verifyPassword(password, hashStr);
+  const ok = await verifyPassword(password, user.passwordHash);
 
   if (!ok) {
     recordAttempt(ip, false);

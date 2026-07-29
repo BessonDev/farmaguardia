@@ -111,6 +111,19 @@ export const plantillaSlots = sqliteTable(
   ],
 );
 
+export const usuarios = sqliteTable(
+  'usuarios',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    username: text('username').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index('idx_usuarios_username').on(table.username),
+  ],
+);
+
 export type Farmacia = typeof farmacias.$inferSelect;
 export type NuevoTurno = typeof turnos.$inferInsert;
 export type Turno = typeof turnos.$inferSelect;

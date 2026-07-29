@@ -15,7 +15,10 @@ export type AccionAdmin =
   | 'PLANTILLA_CREAR'
   | 'PLANTILLA_APLICAR'
   | 'PLANTILLA_BORRAR'
-  | 'CSV_IMPORT';
+  | 'CSV_IMPORT'
+  | 'CHANGE_PASSWORD_OK'
+  | 'CHANGE_PASSWORD_FAIL'
+  | 'CHANGE_PASSWORD_ERROR';
 
 export function log(accion: AccionAdmin, payload?: Record<string, unknown>): void {
   db.insert(adminLog)
