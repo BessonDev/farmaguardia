@@ -1,9 +1,10 @@
 ---
 import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
+import ChartBars from '~/components/ChartBars.astro';
 import { getTurnoActivo } from '~/lib/turno-actual';
 import { formatHoraCaracas, formatFechaCortaCaracas } from '~/lib/tz';
 import { db, schema } from '~/db/client';
-import { count, gte } from 'drizzle-orm';
+import { count, gte, desc, eq, lte } from 'drizzle-orm';
 
 const turno = await getTurnoActivo();
 
@@ -29,6 +30,19 @@ const [overridesVigentes] = db
   .from(schema.anunciosTurno)
   .where(gte(schema.anunciosTurno.vigenteHastaUtc, new Date().toISOString()))
   .all();
+
+const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+const turnosPorFarmacia = db
+  .select({
+    nombre: schema.farmacias.nombre,
+    total: count(),
+  })
+  .from(schema.turnos)
+  .innerJoin(schema.farmacias, eq(schema.turnos.farmaciaId, schema.farmacias.id))
+  .where(gte(schema.turnos.inicioUtc, hace30dias))
+  .groupBy(schema.farmacias.id)
+  .orderBy(desc(count()))
+  .all();
 ---
 
 <LayoutAdmin title="Dashboard">
@@ -52,6 +66,11 @@ const [overridesVigentes] = db
       <div class="value">{overridesVigentes?.n ?? 0}</div>
     </div>
   </div>
+
+  <ChartBars
+    data={turnosPorFarmacia.map((t) => ({ label: t.nombre, value: t.total }))}
+    title="Turnos por farmacia (últimos 30 días)"
+  />
 
   <div class="card">
     <h3>Turno activo ahora</h3>
