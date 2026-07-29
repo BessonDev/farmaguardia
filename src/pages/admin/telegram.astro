@@ -1,0 +1,115 @@
+---
+import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
+import { cookies, makeCsrfToken } from '~/lib/auth';
+
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const configurado = Boolean(BOT_TOKEN && CHAT_ID);
+
+const csrfToken = makeCsrfToken();
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+---
+
+<LayoutAdmin title="Telegram">
+  <div class="toolbar">
+    <h2 style="margin: 0; flex: 1;">Telegram Bot</h2>
+  </div>
+
+  <div class="card">
+    <h3>Estado de la configuración</h3>
+    <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+      <span style={`display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: ${configurado ? 'var(--accent)' : 'var(--danger)'};`}></span>
+      <span style="font-size: 14px;">
+        {configurado ? 'Bot configurado y listo para enviar notificaciones.' : 'Bot no configurado. Completá las variables de entorno para activar las notificaciones.'}
+      </span>
+    </div>
+  </div>
+
+  {!configurado && (
+    <div class="card">
+      <h3>Cómo configurar</h3>
+      <ol style="margin: 8px 0 0; padding-left: 20px; font-size: 14px; line-height: 2; color: var(--fg-muted);">
+        <li>
+          Abrí Telegram y buscá <strong>@BotFather</strong>
+        </li>
+        <li>
+          Enviále <code>/newbot</code> y seguí los pasos para crear un bot
+        </li>
+        <li>
+          Te va a dar un token. Copialo como valor de <code>TELEGRAM_BOT_TOKEN</code>
+        </li>
+        <li>
+          Buscá tu bot en Telegram y enviále <code>/start</code>
+        </li>
+        <li>
+          Buscá <strong>@userinfobot</strong> y enviále <code>/start</code> para obtener tu ID numérico
+        </li>
+        <li>
+          Copiá ese ID como valor de <code>TELEGRAM_CHAT_ID</code>
+        </li>
+      </ol>
+    </div>
+  )}
+
+  <div class="card">
+    <h3>Probar notificación</h3>
+    <p style="font-size: 13px; color: var(--fg-muted); margin: 0 0 12px;">
+      Enviá un mensaje de prueba a Telegram para verificar que la configuración funciona.
+    </p>
+    <button type="button" class="primary" id="btn-test-telegram" {configurado ? '' : 'disabled'}>
+      {configurado ? '📨 Enviar mensaje de prueba' : 'Configurá el bot primero'}
+    </button>
+    <div id="test-result" style="margin-top: 12px; font-size: 13px;"></div>
+  </div>
+
+  <div class="card">
+    <h3>Variables de entorno</h3>
+    <table style="min-width: auto; font-size: 13px;">
+      <thead>
+        <tr>
+          <th>Variable</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>TELEGRAM_BOT_TOKEN</code></td>
+          <td>{BOT_TOKEN ? '✅ Configurado' : '❌ No configurado'}</td>
+        </tr>
+        <tr>
+          <td><code>TELEGRAM_CHAT_ID</code></td>
+          <td>{CHAT_ID ? '✅ Configurado' : '❌ No configurado'}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</LayoutAdmin>
+
+<script>
+document.getElementById('btn-test-telegram')?.addEventListener('click', async function () {
+  const btn = this;
+  const result = document.getElementById('test-result');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  result.textContent = '';
+  result.style.color = '';
+
+  try {
+    const res = await fetch('/admin/api/telegram/test', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      result.textContent = '✅ Mensaje de prueba enviado. Revisá tu Telegram.';
+      result.style.color = 'var(--accent)';
+    } else {
+      result.textContent = '❌ Error al enviar. Revisá los logs del servidor.';
+      result.style.color = 'var(--danger)';
+    }
+  } catch {
+    result.textContent = '❌ Error de conexión.';
+    result.style.color = 'var(--danger)';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📨 Enviar mensaje de prueba';
+  }
+});
+</script>
