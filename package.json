@@ -20,6 +20,7 @@
     "@node-rs/argon2": "^2.0.2",
     "astro": "^5.5.5",
     "better-sqlite3": "^11.8.1",
+    "csv-parse": "^7.0.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "drizzle-orm": "^0.39.3",
