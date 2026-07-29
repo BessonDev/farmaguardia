@@ -13,7 +13,8 @@ export type AccionAdmin =
   | 'OVERRIDE_CREAR'
   | 'OVERRIDE_BORRAR'
   | 'PLANTILLA_CREAR'
-  | 'PLANTILLA_GENERAR'
+  | 'PLANTILLA_APLICAR'
+  | 'PLANTILLA_BORRAR'
   | 'CSV_IMPORT';
 
 export function log(accion: AccionAdmin, payload?: Record<string, unknown>): void {

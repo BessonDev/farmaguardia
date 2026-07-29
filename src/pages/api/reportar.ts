@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db, schema } from '~/db/client';
-import { eq, and, lte, gte } from 'drizzle-orm';
+import { eq, and, gte } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { notificarReporte, hashIp } from '~/lib/notificar';
 

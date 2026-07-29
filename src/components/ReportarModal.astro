@@ -45,57 +45,65 @@ const { turnoId, farmaciaNombre } = Astro.props;
       <span class="text-4xl">✅</span>
       <p class="font-semibold">Reporte enviado</p>
       <p class="text-sm text-[var(--color-fg-muted)]">Gracias por ayudar a mantener la información actualizada.</p>
-      <button type="button" class="mt-2 rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm hover:bg-[var(--color-bg)]" onclick="document.getElementById('reportar-modal').close()">Cerrar</button>
+      <button type="button" class="mt-2 rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm hover:bg-[var(--color-bg)]" id="cerrar-ok-btn">Cerrar</button>
     </div>
   </div>
 </dialog>
 
-<script>
+<script is:inline>
 const modal = document.getElementById('reportar-modal');
 const form = document.getElementById('reportar-form');
 const btn = document.getElementById('btn-reportar');
 const errorDiv = document.getElementById('reportar-error');
 const okDiv = document.getElementById('reportar-ok');
-const textarea = form.querySelector('textarea[name="motivo"]');
+const textarea = form && form.querySelector('textarea[name="motivo"]');
 const counter = document.getElementById('char-counter');
+const cerrarBtn = document.getElementById('cerrar-modal');
+const cerrarOkBtn = document.getElementById('cerrar-ok-btn');
 
-// Counter
-textarea?.addEventListener('input', () => {
-  if (counter) counter.textContent = `${textarea.value.length}/500`;
-});
+if (textarea && counter) {
+  textarea.addEventListener('input', () => { counter.textContent = textarea.value.length + '/500'; });
+}
 
-// Close buttons
-document.getElementById('cerrar-modal')?.addEventListener('click', () => modal?.close());
-modal?.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+if (cerrarBtn && modal) {
+  cerrarBtn.addEventListener('click', () => modal.close());
+}
+if (cerrarOkBtn && modal) {
+  cerrarOkBtn.addEventListener('click', () => modal.close());
+}
+if (modal) {
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.close(); });
+}
 
-// Submit
-form?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  btn.disabled = true;
-  btn.querySelector('span:last-child').textContent = 'Enviando...';
-  errorDiv?.classList.add('hidden');
+if (form && btn && errorDiv && okDiv) {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    btn.querySelector('span:last-child').textContent = 'Enviando...';
+    errorDiv.classList.add('hidden');
 
-  const fd = new FormData(form);
+    const fd = new FormData(form);
 
-  try {
-    const res = await fetch('/api/reportar', { method: 'POST', body: fd });
-    const data = await res.json();
+    try {
+      const res = await fetch('/api/reportar', { method: 'POST', body: fd });
+      const data = await res.json();
 
-    if (!res.ok || data.error) {
-      errorDiv.textContent = data.error || 'Error al enviar. Intentalo de nuevo.';
-      errorDiv?.classList.remove('hidden');
+      if (!res.ok || data.error) {
+        errorDiv.textContent = data.error || 'Error al enviar. Intentalo de nuevo.';
+        errorDiv.classList.remove('hidden');
+        btn.disabled = false;
+        btn.querySelector('span:last-child').textContent = 'Reportar';
+        return;
+      }
+
+      form.classList.add('hidden');
+      okDiv.classList.remove('hidden');
+    } catch {
+      errorDiv.textContent = 'Error de conexión. Verificá tu internet.';
+      errorDiv.classList.remove('hidden');
       btn.disabled = false;
       btn.querySelector('span:last-child').textContent = 'Reportar';
-      return;
     }
-
-    form.classList.add('hidden');
-    okDiv?.classList.remove('hidden');
-  } catch {
-    errorDiv.textContent = 'Error de conexión. Verificá tu internet.';
-    errorDiv?.classList.remove('hidden');
-    btn.disabled = false;
-    btn.querySelector('span:last-child').textContent = 'Reportar';
-  }
-});
+  });
+}
 </script>

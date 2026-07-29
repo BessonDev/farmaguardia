@@ -57,7 +57,7 @@ const error = Astro.url.searchParams.get('error');
   </div>
 </LayoutAdmin>
 
-<script define:vars={{ farmacias }}>
+<script define:vars={{ farmacias }} is:inline>
 function agregarSlot() {
   const container = document.getElementById('slots-container');
   const rows = container.querySelectorAll('.slot-row');

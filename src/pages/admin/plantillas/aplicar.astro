@@ -2,12 +2,8 @@
 import LayoutAdmin from '~/layouts/LayoutAdmin.astro';
 import { db, schema } from '~/db/client';
 import { cookies, makeCsrfToken } from '~/lib/auth';
-import { eq } from 'drizzle-orm';
 
 const plantillaId = Number(Astro.url.searchParams.get('plantilla_id'));
-const plantilla = plantillaId
-  ? db.select().from(schema.plantillas).where(eq(schema.plantillas.id, plantillaId)).get()
-  : null;
 
 const plantillas = db.select().from(schema.plantillas).orderBy(schema.plantillas.nombre).all();
 
