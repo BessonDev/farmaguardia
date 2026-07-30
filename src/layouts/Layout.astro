@@ -6,6 +6,8 @@ interface Props {
   description?: string;
 }
 
+const origin = Astro.url.origin;
+
 const {
   title = 'FarmaGuardia · Farmacias de turno en Puerto Ayacucho',
   description = 'Consulta en tiempo real qué farmacia está de turno hoy en Puerto Ayacucho, Estado Amazonas, Venezuela. Horarios, teléfonos, WhatsApp y mapa.',
@@ -38,7 +40,7 @@ const {
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://farmaguardia.com" />
+    <meta property="og:url" content={Astro.url.origin} />
     <meta property="og:locale" content="es_VE" />
     <meta property="og:site_name" content="FarmaGuardia" />
 
@@ -59,11 +61,11 @@ const {
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "FarmaGuardia",
-      "url": "https://farmaguardia.com",
+      "url": "{origin}",
       "description": "Consulta en tiempo real qué farmacia está de turno en Puerto Ayacucho, Amazonas, Venezuela.",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://farmaguardia.com",
+        "target": "{origin}",
         "query-input": "required name=search_term"
       }
     }
