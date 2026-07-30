@@ -33,6 +33,7 @@ export const POST: APIRoute = async ({ params, request, cookies: ctxCookies, red
       latitud: parseFloat(formData.get('latitud') as string) || null,
       longitud: parseFloat(formData.get('longitud') as string) || null,
       imagenUrl: String(formData.get('imagen_url') ?? '').trim() || null,
+      delivery: formData.get('delivery') === 'on' ? 1 : 0,
     })
     .where(eq(schema.farmacias.id, id))
     .run();

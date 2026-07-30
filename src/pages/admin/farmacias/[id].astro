@@ -66,6 +66,11 @@ Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSit
         <span style="display: block; font-size: 11px; color: var(--fg-muted); margin-top: 2px;">URL pública de la foto de la farmacia. Se muestra en la landing.</span>
       </label>
 
+      <label class="field-check">
+        <input name="delivery" type="checkbox" checked={farmacia.delivery === 1} />
+        <span>¿Cuenta con servicio de delivery?</span>
+      </label>
+
       <div style="margin-top: 16px; display: flex; gap: 8px;">
         <button type="submit" class="primary">Guardar cambios</button>
         <a href="/admin/farmacias" class="secondary">Cancelar</a>

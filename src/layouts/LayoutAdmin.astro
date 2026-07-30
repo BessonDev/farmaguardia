@@ -187,6 +187,15 @@ const links = [
       }
       label.field { display: block; margin-bottom: 12px; }
       label.field span { display: block; font-size: 13px; color: var(--fg-muted); margin-bottom: 4px; }
+      label.field-check {
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 12px; cursor: pointer;
+        font-size: 14px; color: var(--fg);
+      }
+      label.field-check input[type="checkbox"] {
+        width: auto; flex-shrink: 0;
+        accent-color: var(--accent);
+      }
       .form-grid {
         display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 12px;

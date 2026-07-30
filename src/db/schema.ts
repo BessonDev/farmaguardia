@@ -12,6 +12,7 @@ export const farmacias = sqliteTable('farmacias', {
   longitud: real('longitud'),
   imagenUrl: text('imagen_url'),
   activa: integer('activa').notNull().default(1),
+  delivery: integer('delivery').notNull().default(0),
   createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 

@@ -51,6 +51,11 @@ Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSit
         </label>
       </div>
 
+      <label class="field-check">
+        <input name="delivery" type="checkbox" />
+        <span>¿Cuenta con servicio de delivery?</span>
+      </label>
+
       <div style="margin-top: 16px; display: flex; gap: 8px;">
         <button type="submit" class="primary">Crear farmacia</button>
         <a href="/admin/farmacias" class="secondary">Cancelar</a>

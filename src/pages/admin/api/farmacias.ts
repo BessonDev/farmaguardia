@@ -30,6 +30,7 @@ export const POST: APIRoute = async ({ request, cookies: ctxCookies, redirect })
       latitud: parseFloat(formData.get('latitud') as string) || null,
       longitud: parseFloat(formData.get('longitud') as string) || null,
       imagenUrl: String(formData.get('imagen_url') ?? '').trim() || null,
+      delivery: formData.get('delivery') === 'on' ? 1 : 0,
       activa: 1,
     })
     .returning()

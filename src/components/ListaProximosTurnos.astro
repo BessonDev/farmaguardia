@@ -4,7 +4,7 @@ import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface Props {
-  turnos: Array<{ farmacia: { nombre: string }; inicioUtc: string; finUtc: string; turnoId: number }>;
+  turnos: Array<{ farmacia: { nombre: string; delivery: number | null }; inicioUtc: string; finUtc: string; turnoId: number }>;
 }
 
 const { turnos } = Astro.props;
@@ -62,7 +62,12 @@ function capitalize(s: string): string {
               <span class="text-[11px] mt-0.5">{sub}</span>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="font-semibold text-sm group-hover:text-[var(--color-accent)] transition-colors">{t.farmacia.nombre}</p>
+              <div class="flex items-center gap-1.5">
+                <p class="font-semibold text-sm group-hover:text-[var(--color-accent)] transition-colors">{t.farmacia.nombre}</p>
+                {t.farmacia.delivery === 1 && (
+                  <span class="shrink-0 text-[11px]">🚚</span>
+                )}
+              </div>
               <p class="text-xs text-[var(--color-fg-muted)] mt-0.5">
                 {capitalize(format(utcToCaracas(t.inicioUtc), 'EEEE', { locale: es }))} {format(utcToCaracas(t.inicioUtc), "d 'de' MMMM · HH:mm", { locale: es })} — {formatHoraCaracas(t.finUtc)}
               </p>

@@ -12,6 +12,7 @@ export interface Farmacia {
   latitud: number | null;
   longitud: number | null;
   imagenUrl: string | null;
+  delivery: number | null;
 }
 
 export interface TurnoActivo {
