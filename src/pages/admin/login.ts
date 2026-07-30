@@ -100,6 +100,10 @@ export const GET: APIRoute = ({ url, cookies: ctxCookies, locals, redirect, requ
 export const POST: APIRoute = async ({ request, cookies: ctxCookies, redirect }) => {
   const ip = getClientIp(request);
 
+  console.log('[login] POST', request.url);
+  console.log('[login] cookie header:', request.headers.get('cookie'));
+  console.log('[login] csrf cookie (ctxCookies):', ctxCookies.get(cookies.csrf)?.value);
+
   if (isRateLimited(ip)) {
     return redirect('/admin/login?error=ratelimit', 302);
   }
@@ -109,6 +113,10 @@ export const POST: APIRoute = async ({ request, cookies: ctxCookies, redirect })
   const csrfForm = String(formData.get('_csrf') ?? '');
   const csrfCookie = ctxCookies.get(cookies.csrf)?.value;
   const next = String(formData.get('next') ?? '/admin');
+
+  console.log('[login] csrfForm:', csrfForm);
+  console.log('[login] csrfCookie:', csrfCookie);
+  console.log('[login] verifyCsrf:', verifyCsrf(csrfForm, csrfCookie));
 
   if (!verifyCsrf(csrfForm, csrfCookie)) {
     return redirect('/admin/login?error=csrf', 302);
