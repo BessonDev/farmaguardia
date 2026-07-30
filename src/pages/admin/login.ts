@@ -83,6 +83,7 @@ export const GET: APIRoute = ({ url, cookies: ctxCookies, locals, redirect, requ
     path: '/',
     httpOnly: false,
     sameSite: 'lax',
+    secure: import.meta.env.PROD,
     maxAge: 86400,
   });
 

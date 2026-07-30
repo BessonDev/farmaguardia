@@ -22,7 +22,7 @@ const turnosActivos = db
 const farmacias = db.select().from(schema.farmacias).where(eq(schema.farmacias.activa, 1)).orderBy(schema.farmacias.nombre).all();
 
 const csrfToken = makeCsrfToken();
-Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', secure: import.meta.env.PROD, maxAge: 86400 });
 
 const turnoIdParam = Astro.url.searchParams.get('turno_id');
 ---

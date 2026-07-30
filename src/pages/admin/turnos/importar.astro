@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 import { eq } from 'drizzle-orm';
 
 const csrfToken = makeCsrfToken();
-Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', secure: import.meta.env.PROD, maxAge: 86400 });
 
 const error = Astro.url.searchParams.get('error');
 const okCount = Astro.url.searchParams.get('ok');

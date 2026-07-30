@@ -7,7 +7,7 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const configurado = Boolean(BOT_TOKEN && CHAT_ID);
 
 const csrfToken = makeCsrfToken();
-Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', secure: import.meta.env.PROD, maxAge: 86400 });
 ---
 
 <LayoutAdmin title="Telegram">

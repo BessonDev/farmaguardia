@@ -8,7 +8,7 @@ const plantillaId = Number(Astro.url.searchParams.get('plantilla_id'));
 const plantillas = db.select().from(schema.plantillas).orderBy(schema.plantillas.nombre).all();
 
 const csrfToken = makeCsrfToken();
-Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', secure: import.meta.env.PROD, maxAge: 86400 });
 
 const error = Astro.url.searchParams.get('error');
 ---

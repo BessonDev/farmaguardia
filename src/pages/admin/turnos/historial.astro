@@ -7,7 +7,7 @@ import { eq, desc, lte, gte, and, sql } from 'drizzle-orm';
 import { count } from 'drizzle-orm';
 
 const csrfToken = makeCsrfToken();
-Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', maxAge: 86400 });
+Astro.cookies.set(cookies.csrf, csrfToken, { path: '/', httpOnly: false, sameSite: 'lax', secure: import.meta.env.PROD, maxAge: 86400 });
 
 const url = Astro.url;
 const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
