@@ -82,4 +82,4 @@ typings/
 # Astro
 .svelte-kit/
 .astro/
-.cache/
+.cache/.env
