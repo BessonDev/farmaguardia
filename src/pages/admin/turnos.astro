@@ -1,0 +1,302 @@
+---
+// src/pages/admin/turnos.astro
+import { db } from '../../db';
+import { turnos, farmacias } from '../../db/schema';
+import { eq, and, lte, gte } from 'drizzle-orm';
+import { getCookie } from 'cookie';
+
+// Simple auth check (same as in other admin pages)
+const request = Astro.request;
+const cookies = request.headers.get('cookie') ?? '';
+const authCookie = cookies.split('; ').find(row => row.startsWith('admin_token='));
+const isAuthenticated = authCookie && authCookie.split('=')[1] === import.meta.env.ADMIN_PASSWORD;
+
+if (!isAuthenticated) {
+  return Astro.redirect('/admin/login');
+}
+
+// Get edit ID from query params
+const editId = Astro.url.searchParams.get('edit');
+let turnoToEdit = null;
+if (editId) {
+  const result = await db
+    .select({
+      turno: turnos,
+      farmacia: farmacias
+    })
+    .from(turnos)
+    .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
+    .where(eq(turnos.id, parseInt(editId)))
+    .get();
+  turnoToEdit = result;
+}
+
+// Handle form submission
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const action = formData.get('_action') as string;
+
+  if (action === 'create') {
+    const farmaciaId = parseInt(formData.get('farmaciaId') as string);
+    const inicio = formData.get('inicio') as string;
+    const fin = formData.get('fin') as string;
+    const notas = formData.get('notas') as string || null;
+
+    await db.insert(turnos).values({
+      farmaciaId,
+      inicio,
+      fin,
+      notas
+    });
+
+    return Astro.redirect('/admin/turnos');
+  }
+
+  if (action === 'update') {
+    const id = parseInt(formData.get('id') as string);
+    const farmaciaId = parseInt(formData.get('farmaciaId') as string);
+    const inicio = formData.get('inicio') as string;
+    const fin = formData.get('fin') as string;
+    const notas = formData.get('notas') as string || null;
+
+    await db.update(turnos).set({
+      farmaciaId,
+      inicio,
+      fin,
+      notas
+    }).where(eq(turnos.id, id));
+
+    return Astro.redirect('/admin/turnos');
+  }
+
+  if (action === 'delete') {
+    const id = parseInt(formData.get('id') as string);
+    await db.delete(turnos).where(eq(turnos.id, id));
+    return Astro.redirect('/admin/turnos');
+  }
+}
+
+// Fetch all turnos with farmacia info
+const allTurnos = await db
+  .select({
+    turno: turnos,
+    farmacia: farmacias
+  })
+  .from(turnos)
+  .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
+  .orderBy(turnos.inicio);
+
+// Fetch all active farmacias for the dropdown
+const allFarmacias = await db.select().from(farmacias).where(eq(farmacias.activa, 1)).orderBy(farmacias.nombre);
+---
+<layout>
+  <div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Gestión de Turnos</h1>
+      <a href="/admin/turnos/nuevo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+        Nuevo Turno
+      </a>
+    </div>
+
+    {/* Form for creating/editing turno */}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        {turnoToEdit ? 'Editar Turno' : 'Nuevo Turno'}
+      </h2>
+      <form method="POST" class="space-y-4">
+        <input type="hidden" name="_action" value={turnoToEdit ? 'update' : 'create'} />
+        {turnoToEdit && (
+          <input type="hidden" name="id" value={turnoToEdit.turno.id} />
+        )}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="farmaciaId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Farmacia
+            </label>
+            <select 
+              id="farmaciaId" 
+              name="farmaciaId"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">Seleccione una farmacia</option>
+              {allFarmacias.map(farmacia => (
+                <option 
+                  key={farmacia.id} 
+                  value={farmacia.id} 
+                  selected={turnoToEdit && turnoToEdit.turno.farmaciaId === farmacia.id}
+                >
+                  {farmacia.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label for="inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Fecha y Hora de Inicio
+            </label>
+            <input 
+              type="datetime-local" 
+              id="inicio" 
+              name="inicio"
+              required
+              value={turnoToEdit ? new Date(turnoToEdit.turno.inicio).toISOString().slice(0, 16) : ''}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label for="fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Fecha y Hora de Fin
+            </label>
+            <input 
+              type="datetime-local" 
+              id="fin" 
+              name="fin"
+              required
+              value={turnoToEdit ? new Date(turnoToEdit.turno.fin).toISOString().slice(0, 16) : ''}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+
+          <div class="md:col-span-2">
+            <label for="notas" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Notas (opcional)
+            </label>
+            <textarea 
+              id="notas" 
+              name="notas"
+              rows="3"
+              placeholder="Ej: Turno especial por feriado, cierre temporal, etc."
+              value={turnoToEdit ? turnoToEdit.turno.notas : ''}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <button type="submit" 
+                  class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+            {turnoToEdit ? 'Actualizar' : 'Crear'}
+          </button>
+          {turnoToEdit && (
+            <a 
+              href="/admin/turnos" 
+              class="text-sm text-gray-600 hover:text-gray-900 dark:hover:text-gray-100"
+            >
+              Cancelar
+            </a>
+          )}
+        </div>
+      </form>
+    </div>
+
+    {/* List of turnos */}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <div class="px-6 py-4">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+          Lista de Turnos
+        </h2>
+        {allTurnos.length > 0 ? (
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Farmacia
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Inicio
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Fin
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Duración
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Notas
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                {allTurnos.map((item, index) => {
+                  const inicio = new Date(item.turno.inicio);
+                  const fin = new Date(item.turno.fin);
+                  const diffHours = (fin.getTime() - inicio.getTime()) / (1000 * 60 * 60);
+                  const duration = `${Math.floor(diffHours)} horas`;
+                  return (
+                    <tr key={item.turno.id} class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {item.farmacia.nombre}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        {new Intl.DateTimeFormat('es-VE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }).format(inicio)}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        {new Intl.DateTimeFormat('es-VE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }).format(fin)}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        {duration}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        {item.turno.notas ?? '-'}
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div class="flex space-x-2">
+                          <a 
+                            href={`/admin/turnos?edit=${item.turno.id}`} 
+                            class="text-indigo-600 hover:text-indigo-900 dark:hover:text-gray-100"
+                          >
+                            Editar
+                          </a>
+                          <form 
+                            method="POST" 
+                            class="d-inline"
+                            onsubmit="return confirm('¿Está seguro de que desea eliminar este turno? Esta acción no se puede deshacer.');"
+                          >
+                            <input type="hidden" name="_action" value="delete" />
+                            <input type="hidden" name="id" value={item.turno.id} />
+                            <button 
+                              type="submit"
+                              class="text-red-600 hover:text-red-900 dark:hover:text-gray-100"
+                            >
+                              Eliminar
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="text-center py-8">
+            <p class="text-gray-500 dark:text-gray-400">
+              No hay turnos registrados aún.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</layout>
