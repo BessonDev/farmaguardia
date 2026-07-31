@@ -1,0 +1,80 @@
+---
+// src/pages/index.astro
+import { db } from '../db';
+import { eq, and, lte, gte } from 'drizzle-orm';
+import { turnos, farmacias } from '../db/schema';
+import CardTurnoActual from '../components/CardTurnoActual.astro';
+
+// Fecha y hora actual del servidor (usaremos la zona horaria local de Venezuela)
+const ahora = new Date();
+// Para Venezuela (UTC-4)
+const ahoraVenezolana = new Date(ahora.toLocaleString('es-VE', { timeZone: 'America/Caracas' }));
+
+// Buscar la farmacia activa en este preciso instante
+const turnoActual = await db
+  .select({
+    farmacia: farmacias,
+    turno: turnos
+  })
+  .from(turnos)
+  .innerJoin(farmacias, eq(turnos.farmacia_id, farmacias.id))
+  .where(
+    and(
+      lte(turnos.inicio, ahoraVenezolana),
+      gte(turnos.fin, ahoraVenezolana)
+    )
+  )
+  .get();
+---
+<Layout>
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        FarmaGuardia
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-400">
+        Farmacias de Turno en Puerto Ayacucho, Estado Amazonas
+      </p>
+    </header>
+
+    {turnoActual ? (
+      <CardTurnoActual 
+        farmacia={turnoActual.farmacia} 
+        turno={turnoActual.turno} 
+        ahora={ahoraVenezolana} 
+      />
+    ) : (
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          No hay farmacia de turno registrada en este momento
+        </h2>
+        <p class="text-gray-600 dark:text-gray-400 mb-6">
+          Por favor, verifique más tarde o contacte a las autoridades de salud locales para emergencias.
+        </p>
+        <div class="space-y-4">
+          <p class="text-gray-500 dark:text-gray-400">
+            Números de emergencia en Puerto Ayacucho:
+          </p>
+          <ul class="text-left text-gray-600 dark:text-gray-400 list-disc pl-5">
+            <li>911 - Emergencias nacionales</li>
+            <li>0248-5551234 - Hospital Universitario de Amazonas</li>
+            <li>0248-5555678 - Protección Civil Amazonas</li>
+          </ul>
+        </div>
+      </div>
+    )}
+
+    <section class="mt-12">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
+        Próximos Turnos
+      </h2>
+      
+      {/* Aquí iría la lista de próximos turnos - la implementaremos después */}
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <p class="text-gray-500 dark:text-gray-400 text-center py-8">
+          Próximos turnos disponibles próximamente...
+        </p>
+      </div>
+    </section>
+  </main>
+</Layout>

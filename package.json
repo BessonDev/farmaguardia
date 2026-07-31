@@ -1,0 +1,35 @@
+{
+  "name": "farmaguardia",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "astro dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BessonDev/farmaguardia.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BessonDev/farmaguardia/issues"
+  },
+  "homepage": "https://github.com/BessonDev/farmaguardia#readme",
+  "dependencies": {
+    "@astrojs/tailwind": "^6.0.2",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.1.2",
+    "astro": "^5.18.2",
+    "autoprefixer": "^10.5.4",
+    "better-sqlite3": "^13.0.2",
+    "date-fns": "^4.4.0",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  },
+  "type": "commonjs"
+}
