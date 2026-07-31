@@ -218,3 +218,22 @@ Opción VPS Económico (All-in-one):
 Un servidor VPS económico (Coolify, Dokku o Node puro) alojando tanto la app Node de Astro como el archivo SQLite local en el mismo disco.
 
 ¿Te gustaría que te ayude a definir el diseño del wireframe para la landing page o prefieres arrancar estructurando el esquema de la base de datos?
+
+
+Funciones
+🌐 Landing pública	Badge animado "Abierto", mapa OSM embebido, próximos turnos, fallback sin turno, modal de reporte
+📊 Dashboard admin	Stats rápidas, turno activo, gráfico ChartBars (CSS-only, 0 deps) — turnos por farmacia últimos 30 días
+🏪 CRUD Farmacias	Nombre, dirección, sector, coords GPS, teléfono, WhatsApp, imagen, activo/inactivo
+📅 CRUD Turnos	Crear/editar/borrar, validación de solapamiento, enlace a Importar / Historial
+📥 Importar CSV/Excel	Upload → parse → preview → batch insert. Plantilla descargable
+📋 Historial paginado	Filtros por farmacia + rango fechas, 50/page, JOIN override
+🔁 Plantillas de rotación	Slots configurables para generar turnos masivos
+⚠️ Overrides de emergencia	Vigencia por rango de fechas, badge en landing y admin
+🔑 Cambio de contraseña	UI en /admin/cambiar-password
+🤖 Telegram Bot	Config page en admin con estado, guía y botón de prueba
+Telegram bot para recibir reportes publicos desde alli
+🌓 Modo oscuro/claro	System preference + localStorage, sin flash
+📱 PWA	manifest.json + service worker offline básico
+🕐 Zona horaria	Todo en UTC, conversión a America/Caracas solo en presentación
+🚦 Rate limiting	Login 5/15min, reportes públicos 3/hora
+📱 Responsive	Tablas con scroll horizontal, toolbar apilable, sidebar fluida sin overlap

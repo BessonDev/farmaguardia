@@ -1,1 +1,0 @@
-ALTER TABLE `farmacias` ADD `delivery` integer DEFAULT 0 NOT NULL;
