@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/BessonDev/farmaguardia#readme",
   "dependencies": {
+    "@astrojs/node": "^9.5.5",
     "@astrojs/tailwind": "6.0.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.1.2",

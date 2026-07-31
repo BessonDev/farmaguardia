@@ -1,5 +1,5 @@
 const Database = require('better-sqlite3');
-const db = new Database('farmaguardia.db');
+const db = new Database(process.env.DATABASE_PATH || 'farmaguardia.db');
 
 // Create tables if they don't exist
 db.exec(`

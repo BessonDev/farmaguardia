@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { farmacias, turnos } from './schema';
 
 // Create SQLite database
-const sqlite = new Database('farmaguardia.db');
+const sqlite = new Database(process.env.DATABASE_PATH || 'farmaguardia.db');
 export const db = drizzle(sqlite, {
   schema: {
     farmacias,

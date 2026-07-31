@@ -1,7 +1,6 @@
 version: 1
 services:
   web:
-    image: ghcr.io/tu-usuario/farmaguardia:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,4 +11,7 @@ services:
       # Optional: Telegram credentials for notifications
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    volumes:
+      # Persistent SQLite database (survives redeploys)
+      - /app/data:/app/data
     restart: unless-stopped
