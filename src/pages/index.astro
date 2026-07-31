@@ -4,6 +4,7 @@ import { db } from '../db';
 import { eq, and, lte, gte } from 'drizzle-orm';
 import { turnos, farmacias } from '../db/schema';
 import CardTurnoActual from '../components/CardTurnoActual.astro';
+import ListaProximosTurnos from '../components/ListaProximosTurnos.astro';
 
 // Fecha y hora actual del servidor (usaremos la zona horaria local de Venezuela)
 const ahora = new Date();
@@ -17,7 +18,7 @@ const turnoActual = await db
     turno: turnos
   })
   .from(turnos)
-  .innerJoin(farmacias, eq(turnos.farmacia_id, farmacias.id))
+  .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
   .where(
     and(
       lte(turnos.inicio, ahoraVenezolana),
@@ -25,6 +26,23 @@ const turnoActual = await db
     )
   )
   .get();
+
+// Obtener los próximos turnos (próximos 3 días)
+const proximosTurnos = await db
+  .select({
+    farmacia: farmacias,
+    turno: turnos
+  })
+  .from(turnos)
+  .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
+  .where(
+    and(
+      gte(turnos.inicio, ahoraVenezolana),
+      lte(turnos.inicio, new Date(ahoraVenezolana.getTime() + 3 * 24 * 60 * 60 * 1000)) // 3 días
+    )
+  )
+  .orderBy(turnos.inicio)
+  .limit(6); // Limitar a 6 turnos (mañana y tarde de cada día)
 ---
 <Layout>
   <main class="max-w-4xl mx-auto px-4 py-8">
@@ -69,12 +87,15 @@ const turnoActual = await db
         Próximos Turnos
       </h2>
       
-      {/* Aquí iría la lista de próximos turnos - la implementaremos después */}
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <p class="text-gray-500 dark:text-gray-400 text-center py-8">
-          Próximos turnos disponibles próximamente...
-        </p>
-      </div>
+      {proximosTurnos.length > 0 ? (
+        <ListaProximosTurnos turnos={proximosTurnos} />
+      ) : (
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <p class="text-gray-500 dark:text-gray-400 text-center py-8">
+            No hay turnos programados para los próximos días.
+          </p>
+        </div>
+      )}
     </section>
   </main>
 </Layout>

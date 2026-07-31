@@ -1,7 +1,5 @@
-import { pgTable, text, integer, real, timestamp } from "drizzle-orm/pg-core";
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, timestamp } from "drizzle-orm/sqlite-core";
 
-// Since we are using better-sqlite3, we use sqliteTable
 export const farmacias = sqliteTable("farmacias", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   nombre: text("nombre").notNull(),
@@ -13,6 +11,7 @@ export const farmacias = sqliteTable("farmacias", {
   longitud: real("longitud"),
   imagenUrl: text("imagen_url"),
   activa: integer("activa").default(1), // 1: Activa, 0: Inactiva
+  entrega: integer("entrega").default(0), // 0: No, 1: Sí
   createdAt: timestamp("created_at").defaultNow()
 });
 
@@ -22,4 +21,13 @@ export const turnos = sqliteTable("turnos", {
   inicio: timestamp("inicio").notNull(),
   fin: timestamp("fin").notNull(),
   notas: text("notas")
+});
+
+export const reportes = sqliteTable("reportes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  farmaciaId: integer("farmacia_id").notNull().references(() => farmacias.id),
+  turnoId: integer("turno_id").references(() => turnos.id),
+  timestamp: timestamp("timestamp").defaultNow(),
+  mensaje: text("mensaje"),
+  ipAddress: text("ip_address")
 });
