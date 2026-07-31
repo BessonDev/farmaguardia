@@ -28,7 +28,7 @@ export const turnos = sqliteTable("turnos", {
 // Tabla: reportes (Reportes de la comunidad sobre farmacias que no están abiertas)
 export const reportes = sqliteTable("reportes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  farmaciaId: integer("farmacia_id").notNull().references(() => farmacias.id),
+  farmaciaId: integer("farmacia_id").references(() => farmacias.id),
   mensaje: text("mensaje").notNull(),
   creadoEn: timestamp("creado_en").defaultNow()
 });
