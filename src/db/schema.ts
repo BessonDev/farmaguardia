@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, real, timestamp } from "drizzle-orm/sqlite-core";
 
+// Tabla: farmacias (Catálogo de establecimientos)
 export const farmacias = sqliteTable("farmacias", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   nombre: text("nombre").notNull(),
@@ -11,10 +12,11 @@ export const farmacias = sqliteTable("farmacias", {
   longitud: real("longitud"),
   imagenUrl: text("imagen_url"),
   activa: integer("activa").default(1), // 1: Activa, 0: Inactiva
-  entrega: integer("entrega").default(0), // 0: No, 1: Sí
+  entrega: integer("entrega").default(0), // 1: Sí, 0: No
   createdAt: timestamp("created_at").defaultNow()
 });
 
+// Tabla: turnos (Asignaciones cronológicas)
 export const turnos = sqliteTable("turnos", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   farmaciaId: integer("farmacia_id").notNull().references(() => farmacias.id),
@@ -23,11 +25,10 @@ export const turnos = sqliteTable("turnos", {
   notas: text("notas")
 });
 
+// Tabla: reportes (Reportes de la comunidad sobre farmacias que no están abiertas)
 export const reportes = sqliteTable("reportes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   farmaciaId: integer("farmacia_id").notNull().references(() => farmacias.id),
-  turnoId: integer("turno_id").references(() => turnos.id),
-  timestamp: timestamp("timestamp").defaultNow(),
-  mensaje: text("mensaje"),
-  ipAddress: text("ip_address")
+  mensaje: text("mensaje").notNull(),
+  creadoEn: timestamp("creado_en").defaultNow()
 });

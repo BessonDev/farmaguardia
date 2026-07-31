@@ -56,11 +56,25 @@ const proximosTurnos = await db
     </header>
 
     {turnoActual ? (
-      <CardTurnoActual 
-        farmacia={turnoActual.farmacia} 
-        turno={turnoActual.turno} 
-        ahora={ahoraVenezolana} 
-      />
+      <>
+        <div class="mb-8">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Farmacia de Turno Actual
+          </h2>
+          <CardTurnoActual 
+            farmacia={turnoActual.farmacia} 
+            turno={turnoActual.turno} 
+            ahora={ahoraVenezolana} 
+          />
+        </div>
+
+        <div class="mb-8">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Próximos Turnos
+          </h2>
+          <ListaProximosTurnos turnos={proximosTurnos} />
+        </div>
+      </>
     ) : (
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
         <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -81,21 +95,5 @@ const proximosTurnos = await db
         </div>
       </div>
     )}
-
-    <section class="mt-12">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
-        Próximos Turnos
-      </h2>
-      
-      {proximosTurnos.length > 0 ? (
-        <ListaProximosTurnos turnos={proximosTurnos} />
-      ) : (
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-          <p class="text-gray-500 dark:text-gray-400 text-center py-8">
-            No hay turnos programados para los próximos días.
-          </p>
-        </div>
-      )}
-    </section>
   </main>
 </Layout>
