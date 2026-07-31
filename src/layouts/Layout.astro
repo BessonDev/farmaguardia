@@ -3,12 +3,32 @@
 import '../styles/global.css';
 ---
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FarmaGuardia - Farmacias de Turno en Puerto Ayacucho</title>
     <meta name="description" content="Consulta en tiempo real cuál farmacia está de turno en Puerto Ayacucho, Estado Amazonas. Información actualizada las 24 horas." />
+    <script>
+      // Dark mode functionality
+      const html = document.documentElement;
+      const storedTheme = localStorage.getItem('theme');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      // If there's a stored preference, use it; otherwise, use system preference
+      if (storedTheme) {
+        html.classList.toggle('dark', storedTheme === 'dark');
+      } else {
+        html.classList.toggle('dark', systemPrefersDark);
+      }
+
+      // Listen for changes to the system preference (optional, but good for real-time switching)
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (!localStorage.getItem('theme')) {
+          html.classList.toggle('dark', e.matches);
+        }
+      });
+    </script>
   </head>
   <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
     <slot />
