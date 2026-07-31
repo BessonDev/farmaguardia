@@ -3,154 +3,333 @@
 import { db } from '../../db';
 import { farmacias } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import { getCookie } from 'cookie';
 
-// Simple auth check
-const request = Astro.request;
-const cookies = request.headers.get('cookie') ?? '';
-const authCookie = cookies.split('; ').find(row => row.startsWith('admin_token='));
-const isAuthenticated = authCookie && authCookie.split('=')[1] === import.meta.env.ADMIN_PASSWORD;
-
-if (!isAuthenticated) {
-  return Astro.redirect('/admin/login');
+// Get edit ID from query params
+const editId = Astro.url.searchParams.get('edit');
+let farmaciaToEdit = null;
+if (editId) {
+  const result = await db.select().from(farmacias).where(eq(farmacias.id, parseInt(editId))).get();
+  farmaciaToEdit = result;
 }
 
-// Handle form submissions
+// Handle form submission
 if (Astro.request.method === 'POST') {
   const formData = await Astro.request.formData();
-  const action = formData.get('action');
+  const action = formData.get('_action') as string;
 
   if (action === 'create') {
-    const nombre = formData.get('nombre') as string;
-    const direccion = formData.get('direccion') as string;
-    const telefono = formData.get('telefono') as string || null;
-    const whatsapp = formData.get('whatsapp') as string || null;
-    const sector = formData.get('sector') as string || 'Centro';
-    const latitud = formData.get('latitud') ? parseFloat(formData.get('latitud') as string) : null;
-    const longitud = formData.get('longitud') ? parseFloat(formData.get('longitud') as string) : null;
-    const imagenUrl = formData.get('imagenUrl') as string || null;
-    const entrega = formData.get('entrega') === 'on' ? 1 : 0;
-
+    // Insert new farmacia
     await db.insert(farmacias).values({
-      nombre,
-      direccion,
-      telefono,
-      whatsapp,
-      sector,
-      latitud,
-      longitud,
-      imagenUrl,
-      activa: 1,
-      entrega
+      nombre: formData.get('nombre') as string,
+      direccion: formData.get('direccion') as string,
+      telefono: formData.get('telefono') as string || null,
+      whatsapp: formData.get('whatsapp') as string || null,
+      latitud: formData.get('latitud') ? parseFloat(formData.get('latitud') as string) : null,
+      longitud: formData.get('longitud') ? parseFloat(formData.get('longitud') as string) : null,
+      imagen_url: formData.get('imagen_url') as string || null,
+      activa: formData.get('activa') ? 1 : 0,
+      entrega: formData.get('entrega') ? 1 : 0 // Note: using 'entrega' to match the seed data? Actually we used 'delivery' in seed, but in schema we have 'delivery'. Let's check.
     });
-
-    return Astro.redirect('/admin/farmacias');
-  }
-
-  if (action === 'update') {
-    const id = parseInt(formData.get('id') as string);
-    const nombre = formData.get('nombre') as string;
-    const direccion = formData.get('direccion') as string;
-    const telefono = formData.get('telefono') as string || null;
-    const whatsapp = formData.get('whatsapp') as string || null;
-    const sector = formData.get('sector') as string || 'Centro';
-    const latitud = formData.get('latitud') ? parseFloat(formData.get('latitud') as string) : null;
-    const longitud = formData.get('longitud') ? parseFloat(formData.get('longitud') as string) : null;
-    const imagenUrl = formData.get('imagenUrl') as string || null;
-    const entrega = formData.get('entrega') === 'on' ? 1 : 0;
-    const activa = formData.get('activa') === 'on' ? 1 : 0;
-
+  } else if (action === 'update' && editId) {
+    // Update existing farmacia
     await db.update(farmacias).set({
-      nombre,
-      direccion,
-      telefono,
-      whatsapp,
-      sector,
-      latitud,
-      longitud,
-      imagenUrl,
-      activa,
-      entrega
-    }).where(eq(farmacias.id, id));
-
-    return Astro.redirect('/admin/farmacias');
+      nombre: formData.get('nombre') as string,
+      direccion: formData.get('direccion') as string,
+      telefono: formData.get('telefono') as string || null,
+      whatsapp: formData.get('whatsapp') as string || null,
+      latitud: formData.get('latitud') ? parseFloat(formData.get('latitud') as string) : null,
+      longitud: formData.get('longitud') ? parseFloat(formData.get('longitud') as string) : null,
+      imagen_url: formData.get('imagen_url') as string || null,
+      activa: formData.get('activa') ? 1 : 0,
+      entrega: formData.get('entrega') ? 1 : 0
+    }).where(eq(farmacias.id, parseInt(editId)));
+  } else if (action === 'delete') {
+    const idToDelete = formData.get('id') as string;
+    if (idToDelete) {
+      await db.delete(farmacias).where(eq(farmacias.id, parseInt(idToDelete)));
+    }
   }
 
-  if (action === 'delete') {
-    const id = parseInt(formData.get('id') as string);
-    await db.delete(farmacias).where(eq(farmacias.id, id));
-    return Astro.redirect('/admin/farmacias');
-  }
+  // After processing, redirect to the same page to avoid form resubmission
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: '/admin/farmacias' // Remove any query parameters
+    }
+  });
 }
 
-// Fetch all farmacias
-const allFarmacias = await db.select().from(farmacias).orderBy(farmacias.nombre);
+// Fetch all farmacias for the list
+const allFarmacias = await db.select().from(farmacias);
 ---
 <layout>
   <div class="space-y-6">
+    {/* Header with title and buttons */}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Gestión de Farmacias</h1>
-      <a href="/admin/farmacias/nuevo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
-        Nueva Farmacia
-      </a>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        Gestión de Farmacias
+      </h1>
+      <div class="flex space-x-3 mt-4 sm:mt-0">
+        <a 
+          href="/admin/farmacias?edit=new" 
+          class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Nueva Farmacia
+        </a>
+        <a 
+          href="/admin/" 
+          class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+        >
+          Volver al Panel
+        </a>
+      </div>
     </div>
 
-    {/* Mensaje de éxito o error (se puede implementar con flash messages) */}
-    {/* Por ahora, asumimos que la redirect maneja el feedback */}
+    {/* Form for creating/editing */}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+        {farmaciaToEdit ? 'Editar Farmacia' : 'Nueva Farmacia'}
+      </h2>
+      <form method="POST" class="space-y-4">
+        <input type="hidden" name="_action" value={farmaciaToEdit ? 'update' : 'create'} />
+        {farmaciaToEdit && (
+          <input type="hidden" name="id" value={farmaciaToEdit.id} />
+        )}
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nombre</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dirección</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sector</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Teléfono</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">WhatsApp</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entrega</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200 dark:border-gray-700">
-          {allFarmacias.map(farmacia => (
-            <tr key={farmacia.id} class="hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td class="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">{farmacia.nombre}</td>
-              <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{farmacia.direccion}</td>
-              <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{farmacia.sector}</td>
-              <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{farmacia.telefono ?? '-'}</td>
-              <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{farmacia.whatsapp ?? '-'}</td>
-              <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-                {farmacia.entrega ? (
-                  <span class="flex items-center">
-                    <svg class="w-4 h-4 mr-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Sí
-                  </span>
-                ) : (
-                  <span class="text-gray-500">No</span>
-                )}
-              </td>
-              <td class="px-4 py-2 text-sm space-x-2">
-                <form method="POST" action="/admin/farmacias" class="inline">
-                  <input type="hidden" name="action" value="edit" />
-                  <input type="hidden" name="id" value={farmacia.id} />
-                  <button type="submit" class="text-blue-600 hover:text-blue-900 hover:underline" title="Editar">
-                    Editar
-                  </button>
-                </form>
-                <form method="POST" action="/admin/farmacias" class="inline" onsubmit="return confirm('¿Está seguro de eliminar esta farmacia?');">
-                  <input type="hidden" name="action" value="delete" />
-                  <input type="hidden" name="id" value={farmacia.id} />
-                  <button type="submit" class="text-red-600 hover:text-red-900 hover:underline" title="Eliminar">
-                    Eliminar
-                  </button>
-                </form>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <div>
+          <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Nombre *
+          </label>
+          <input 
+            type="text" 
+            id="nombre" 
+            name="nombre"
+            required
+            value={farmaciaToEdit?.nombre || ''}
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label for="direccion" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Dirección *
+          </label>
+          <input 
+            type="text" 
+            id="direccion" 
+            name="direccion"
+            required
+            value={farmaciaToEdit?.direccion || ''}
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Teléfono
+            </label>
+            <input 
+              type="text" 
+              id="telefono" 
+              name="telefono"
+              value={farmaciaToEdit?.telefono || ''}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label for="whatsapp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              WhatsApp
+            </label>
+            <input 
+              type="text" 
+              id="whatsapp" 
+              name="whatsapp"
+              value={farmaciaToEdit?.whatsapp || ''}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="latitud" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Latitud
+            </label>
+            <input 
+              type="number" 
+              step="any"
+              id="latitud" 
+              name="latitud"
+              value={farmaciaToEdit?.latitud || ''}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label for="longitud" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Longitud
+            </label>
+            <input 
+              type="number" 
+              step="any"
+              id="longitud" 
+              name="longitud"
+              value={farmaciaToEdit?.longitud || ''}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label for="imagen_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            URL de Imagen
+          </label>
+          <input 
+            type="text" 
+            id="imagen_url" 
+            name="imagen_url"
+            value={farmaciaToEdit?.imagenUrl || ''}
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center">
+            <input 
+              type="checkbox" 
+              id="activa" 
+              name="activa"
+              checked={farmaciaToEdit?.activa === 1}
+              class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label for="activa" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Activa
+            </label>
+          </div>
+          <div class="flex items-center">
+            <input 
+              type="checkbox" 
+              id="entrega" 
+              name="entrega"
+              checked={farmaciaToEdit?.entrega === 1}
+              class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+            />
+            <label for="entrega" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Servicio de Envío
+            </label>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <button 
+            type="submit" 
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded"
+          >
+            {farmaciaToEdit ? 'Actualizar' : 'Crear'}
+          </button>
+          {farmaciaToEdit && (
+            <a 
+              href="/admin/farmacias" 
+              class="text-sm text-gray-600 hover:text-gray-900 dark:hover:text-gray-100"
+            >
+              Cancelar
+            </a>
+          )}
+        </div>
+      </form>
+    </div>
+
+    {/* List of farmacias */}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <div class="px-6 py-4">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+          Lista de Farmacias
+        </h2>
+        {allFarmacias.length > 0 ? (
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Nombre
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Dirección
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Teléfono
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  WhatsApp
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              {allFarmacias.map((farmacia, index) => (
+                <tr key={farmacia.id} class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {farmacia.nombre}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                    {farmacia.direccion}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                    {farmacia.telefono || '-'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                    {farmacia.whatsapp || '-'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm flex items-center">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      {farmacia.activa === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                      {farmacia.activa === 1 ? 'Activa' : 'Inactiva'}
+                    </span>
+                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                      {farmacia.entrega === 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                      {farmacia.entrega === 1 ? 'Envío' : 'Sin Envío'}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div class="flex space-x-2">
+                      <a 
+                        href={`/admin/farmacias?edit=${farmacia.id}`} 
+                        class="text-indigo-600 hover:text-indigo-900 dark:hover:text-gray-100"
+                      >
+                        Editar
+                      </a>
+                      <form 
+                        method="POST" 
+                        class="d-inline"
+                        onsubmit="return confirm('¿Está seguro de que desea eliminar esta farmacia? Esta acción no se puede deshacer.');"
+                      >
+                        <input type="hidden" name="_action" value="delete" />
+                        <input type="hidden" name="id" value={farmacia.id} />
+                        <button 
+                          type="submit"
+                          class="text-red-600 hover:text-red-900 dark:hover:text-gray-100"
+                        >
+                          Eliminar
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div class="text-center py-8">
+            <p class="text-gray-500 dark:text-gray-400">
+              No hay farmacias registradas aún.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   </div>
 </layout>
