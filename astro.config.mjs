@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
-  site: 'https://farmacia.bessondev.com',
+  site: 'https://farmacia.bessondevproject.com',
   output: 'server',
   adapter: node({ mode: 'standalone' }),
   vite: {
