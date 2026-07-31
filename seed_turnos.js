@@ -1,6 +1,18 @@
 const Database = require('better-sqlite3');
 const db = new Database('farmaguardia.db');
 
+// Create table if it doesn't exist
+db.exec(`
+  CREATE TABLE IF NOT EXISTS turnos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    farmacia_id INTEGER NOT NULL,
+    inicio DATETIME NOT NULL,
+    fin DATETIME NOT NULL,
+    notas TEXT,
+    FOREIGN KEY (farmacia_id) REFERENCES farmacias(id) ON DELETE CASCADE
+  );
+`);
+
 // Get today's date at 8:00 AM Venezuela time (UTC-4)
 const now = new Date();
 const venezuelaOffset = -4 * 60; // -4 hours in minutes
@@ -57,5 +69,3 @@ for (let day = 0; day < 3; day++) {
 }
 
 console.log(`Seeded turnos for the next 3 days`);
-
-process.exit(0);
