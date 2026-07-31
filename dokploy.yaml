@@ -1,0 +1,15 @@
+version: 1
+services:
+  web:
+    image: ghcr.io/tu-usuario/farmaguardia:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4321:4321"
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # Optional: Telegram credentials for notifications
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+    restart: unless-stopped

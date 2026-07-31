@@ -15,13 +15,35 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Insert the report
-    await db.insert(reportes).values({
+    const [inserted] = await db.insert(reportes).values({
       farmaciaId: Number(farmaciaId),
       mensaje: mensaje.trim(),
-    });
+    }).returning();
+
+    // Optionally send a Telegram notification if credentials are set
+    const botToken = import.meta.env.TELEGRAM_BOT_TOKEN;
+    const chatId = import.meta.env.TELEGRAM_CHAT_ID;
+    if (botToken && chatId) {
+      try {
+        const telegramMessage = `🚨 Nuevo reporte en FarmaGuardia\n\nFarmacia ID: ${farmaciaId}\nMensaje: ${mensaje.trim()}`;
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: telegramMessage,
+          }),
+        });
+      } catch (telegramError) {
+        // Don't fail the request if Telegram fails
+        console.error('Error sending Telegram notification:', telegramError);
+      }
+    }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, id: inserted.id }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {

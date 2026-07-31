@@ -36,7 +36,7 @@ const formatDateTime = (date: Date) => {
   }).format(date);
 };
 ---
-<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden" data-farmacia-id={farmacia.id}>
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-transform transition-shadow duration-200 hover:scale-105 hover:shadow-xl" data-farmacia-id={farmacia.id}>
   <div class="p-6">
     <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
       {farmacia.imagenUrl && (
@@ -94,19 +94,20 @@ const formatDateTime = (date: Date) => {
           )}
           {farmacia.entrega && (
             <span class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentCost" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
               </svg>
               Envío
             </span>
           )}
-          {/* Report Button */}
-          <button 
+          {/* Reportar button */}
+          <button
+            type="button"
             id="open-report-modal"
             class="flex items-center bg-red-100 text-red-800 px-3 py-1 rounded text-sm hover:bg-red-200 dark:bg-red-200 dark:text-red-100 dark:hover:bg-red-300"
           >
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 1118 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
             Reportar
           </button>
@@ -118,7 +119,7 @@ const formatDateTime = (date: Date) => {
       <div class="flex items-start space-x-3">
         <div class="flex-shrink-0">
           <svg class="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-1 9a1 1 0 10-2 0v3h2v-3zm4-13a1 1 0 00-2 0v5H9a1 1 0 000 2h2v2a1 1 0 002 0v-2h2a1 1 0 000-2h2V5a1 1 0 00-2-0z" clip-rule="evenodd" />
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zm-1 9a1 1 0 10-2 0v3h2v-3zm4-13a1 1 0 00-2 0v5H9a1 1 0 000 2h2v2a1 1 0 000-2h2V5a1 1 0 00-2-0z" clip-rule="evenodd" />
           </svg>
         </div>
         <div>
@@ -140,11 +141,22 @@ const formatDateTime = (date: Date) => {
 
   {/* Report Modal */}
   <div id="report-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
-      <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-        Reporte de Incidente
-      </h2>
-      <p class="text-gray-600 dark:text-gray-400 mb-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6 space-y-6">
+      <div class="flex justify-between items-start">
+        <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+          Reporte de Incidente
+        </h2>
+        <button
+          type="button"
+          id="close-report-modal"
+          class="text-gray-400 hover:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <p class="text-gray-600 dark:text-gray-400">
         Si esta farmacia no está abierta o tienes algún problema, por favor repórtalo abajo.
       </p>
       <form id="report-form" class="space-y-4">
@@ -187,6 +199,7 @@ const formatDateTime = (date: Date) => {
       const modal = document.getElementById('report-modal');
       const form = document.getElementById('report-form');
       const statusEl = document.getElementById('report-status');
+      const closeBtn = document.getElementById('close-report-modal');
       const cancelBtn = document.getElementById('cancel-report');
       const submitBtn = document.getElementById('submit-report');
       const openBtn = document.getElementById('open-report-modal');
@@ -199,6 +212,11 @@ const formatDateTime = (date: Date) => {
       if (openBtn) {
         openBtn.addEventListener('click', () => {
           modal.classList.remove('hidden');
+          // Add a slight delay to allow the transition to work
+          requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+            modal.classList.add('opacity-100');
+          });
           // Focus on the textarea
           document.getElementById('report-message').focus();
         });
@@ -206,14 +224,18 @@ const formatDateTime = (date: Date) => {
 
       // Close modal
       const closeModal = () => {
-        modal.classList.add('hidden');
+        modal.classList.add('opacity-0');
+        modal.classList.remove('opacity-100');
+        // Wait for transition to end before hiding
+        setTimeout(() => {
+          modal.classList.add('hidden');
+        }, 150); // Match the transition duration
         form.reset();
-        form.reset();
-        statusEl.classList.add('hidden');
         statusEl.classList.add('hidden');
         statusEl.textContent = '';
       };
 
+      closeBtn.addEventListener('click', closeModal);
       cancelBtn.addEventListener('click', closeModal);
       // Close on backdrop click
       modal.addEventListener('click', (e) => {
