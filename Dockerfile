@@ -22,7 +22,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/src/db/migrate.ts ./src/db/migrate.ts
+COPY --from=builder /app/src/db ./src/db
+COPY --from=builder /app/src/lib ./src/lib
 COPY --from=builder /app/tsconfig.json ./
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
