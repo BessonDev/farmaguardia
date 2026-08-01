@@ -1,4 +1,4 @@
-# Farma Descuento Ayacucho Plus Dirección: Urbanización Andrés Eloy Blanco, a 100 metros del paseo, Puerto Ayacucho Estado Amazonas. Teléfono: 0416-6857492.
+# Farma Descuento Ayacucho Plus Dirección: Urbanización Andrés Eloy Blanco, a 100 metros del paseo, Puerto Ayacucho Estado Amazonas. Teléfono: 0416-6857492, Delyvery si
 
 # Farma Amazonas (Sede Principal) Dirección: Av. Perimetral, al lado del Centro de Diagnóstico Integral Dr. Gilberto Rodríguez Ochoa, Puerto Ayacucho Estado Amazonas (C.D.I).Teléfono: 0248-5210171.
 

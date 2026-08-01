@@ -1,7 +1,7 @@
 # 📄 Especificación Técnica: Portal de Farmacias de Turno
 
 ## 📌 1. Visión General del Proyecto
-**Nombre del Proyecto:** FarmaAmazonas (o TurnoAyacucho)  
+**Nombre del Proyecto:** FarmaGuardia
 **Ubicación Objetivo:** Puerto Ayacucho, Estado Amazonas, Venezuela  
 **Propósito:** Desarrollo de una plataforma web liviana, accesible y de alto impacto social que permita a la comunidad consultar en tiempo real cuál farmacia se encuentra de turno las 24 horas, facilitando contacto directo y ubicación geográfica.
 
@@ -10,16 +10,15 @@
 ## 🛠️ 2. Stack Tecnológico
 
 - **Framework Web:** [Astro JS](https://astro.build/) (Configurado en modo Híbrido / SSR `output: 'server'`).
-- **Base de Datos:** SQLite (vía `better-sqlite3` para VPS local o `@libsql/client` / Turso para Serverless).
-- **ORM / Query Builder:** Drizzle ORM.
+- **Base de Datos:** SQLite en VPS.
 - **Estilos:** Tailwind CSS (Diseño Mobile-First, ligero y adaptativo).
-- **Despliegue Recomendado:** Node.js VPS local / Cloudflare Pages / Vercel + Turso DB.
+- **Despliegue Recomendado:** Node.js en VPS.
 
 ---
 
 ## 🗄️ 3. Modelo de Base de Datos (Schema)
 
-El esquema de SQLite consta de dos tablas principales y una tabla de auditoría/sesión básica.
+El esquema de SQLite consta de dos tablas principales
 
 ```sql
 -- Tabla: farmacias (Catálogo de establecimientos)
@@ -33,6 +32,7 @@ CREATE TABLE farmacias (
     latitud REAL,
     longitud REAL,
     imagen_url TEXT,
+    delivery BOOLEAN DEFAULT 0, -- 1: Sí, 0: No
     activa INTEGER DEFAULT 1, -- 1: Activa, 0: Inactiva
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
