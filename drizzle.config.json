@@ -1,0 +1,10 @@
+{
+  "schema": "./src/db/schema.ts",
+  "out": "./drizzle",
+  "dialect": "sqlite",
+  "dbCredentials": {
+    "url": "./farmaguardia.db"
+  },
+  "verbose": true,
+  "strict": true
+}

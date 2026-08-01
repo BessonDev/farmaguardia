@@ -1,0 +1,223 @@
+---
+import '../styles/global.css';
+import { formatCaracasDateTime } from '../utils/time';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const { title = 'FarmaGuardia - Farmacias de Turno en Puerto Ayacucho', description = 'Consulta en tiempo real qué farmacia está de turno 24h en Puerto Ayacucho, Estado Amazonas. Contacto directo y ubicación.', ogImage = '/og-image.png', } = Astro.props;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="es-VE" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#0ea5e9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0369a1" media="(prefers-color-scheme: dark)" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+    <meta property="og:site_name" content="FarmaGuardia" />
+    <meta property="og:locale" content="es_VE" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={new URL(ogImage, Astro.site)} />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="FarmaGuardia" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+
+    <!-- Theme script (inline para evitar flash) -->
+    <script is:inline>
+      (function() {
+        try {
+          var theme = localStorage.getItem('theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (theme === 'dark' || (!theme && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- JSON-LD LocalBusiness para SEO -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "FarmaGuardia",
+      "description": "Portal de farmacias de turno en Puerto Ayacucho",
+      "url": Astro.site?.toString(),
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Puerto Ayacucho",
+        "addressRegion": "Amazonas",
+        "addressCountry": "VE"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 5.6667,
+        "longitude": -67.6333
+      }
+    }, null, 2)} />
+  </head>
+  <body class="h-full flex flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+    <slot />
+    
+    <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
+      <div class="max-w-4xl mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
+        <p>FarmaGuardia — Farmacias de turno en Puerto Ayacucho, Amazonas</p>
+        <p class="mt-1">
+          Datos actualizados: {formatCaracasDateTime(new Date())} (UTC-4)
+        </p>
+        <p class="mt-2">
+          <a href="/admin/login" class="underline hover:text-primary">Panel admin</a>
+          {' · '}
+          <button id="report-btn" class="underline hover:text-primary">Reportar error</a>
+        </p>
+      </div>
+    </footer>
+
+    <!-- Modal de reporte (se hidrata en el cliente) -->
+    <div id="report-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
+      <div class="fixed inset-0 bg-black/50" aria-hidden="true"></div>
+      <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6">
+          <h2 id="report-modal-title" class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Reportar problema</h2>
+          <p class="text-gray-600 dark:text-gray-300 mb-4">¿La farmacia de turno no estaba abierta o los datos son incorrectos? Ayúdanos a mejorar.</p>
+          <form id="report-form" class="space-y-4">
+            <input type="hidden" name="farmacia_id" id="report-farmacia-id" />
+            <input type="hidden" name="turno_id" id="report-turno-id" />
+            <div>
+              <label for="report-tipo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de problema</label>
+              <select name="tipo" id="report-tipo" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option value="cerrada">Farmacia cerrada / No atendía</option>
+                <option value="datos_incorrectos">Datos incorrectos (teléfono, dirección, etc.)</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label for="report-detalle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Detalle (opcional)</label>
+              <textarea name="detalle" id="report-detalle" rows="3" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Ej: Llamé y no contestaron, el horario no coincide, etc."></textarea>
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button type="button" id="report-cancel" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Cancelar</button>
+              <button type="submit" class="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900">Enviar reporte</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script is:inline>
+      // Theme toggle
+      const themeToggle = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        html.classList.add('dark');
+      }
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          html.classList.toggle('dark');
+          localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        });
+      }
+
+      // Report modal
+      const reportBtn = document.getElementById('report-btn');
+      const reportModal = document.getElementById('report-modal');
+      const reportCancel = document.getElementById('report-cancel');
+      const reportForm = document.getElementById('report-form');
+      const reportFarmaciaId = document.getElementById('report-farmacia-id');
+      const reportTurnoId = document.getElementById('report-turno-id');
+
+      function openReportModal(farmaciaId?: string, turnoId?: string) {
+        if (reportModal) {
+          reportModal.classList.remove('hidden');
+          reportModal.classList.add('flex');
+          if (farmaciaId) reportFarmaciaId.value = farmaciaId;
+          if (turnoId) reportTurnoId.value = turnoId;
+        }
+      }
+
+      function closeReportModal() {
+        if (reportModal) {
+          reportModal.classList.add('hidden');
+          reportModal.classList.remove('flex');
+          reportForm.reset();
+        }
+      }
+
+      if (reportBtn) {
+        reportBtn.addEventListener('click', () => openReportModal());
+      }
+      if (reportCancel) {
+        reportCancel.addEventListener('click', closeReportModal);
+      }
+      if (reportModal) {
+        reportModal.addEventListener('click', (e) => {
+          if (e.target === reportModal) closeReportModal();
+        });
+      }
+      if (reportForm) {
+        reportForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const formData = new FormData(reportForm);
+          const submitBtn = reportForm.querySelector('button[type="submit"]');
+          const originalText = submitBtn?.textContent;
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Enviando...';
+          try {
+            const res = await fetch('/api/reportes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(Object.fromEntries(formData)),
+            });
+            const data = await res.json();
+            if (data.ok) {
+              alert('¡Gracias! Tu reporte ha sido enviado.');
+              closeReportModal();
+            } else {
+              alert('Error: ' + (data.error || 'No se pudo enviar el reporte'));
+            }
+          } catch {
+            alert('Error de conexión. Intenta de nuevo.');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }
+        });
+      }
+
+      // Exponer para uso desde componentes
+      window.FarmaGuardia = { openReportModal };
+    </script>
+  </body>
+</html>
