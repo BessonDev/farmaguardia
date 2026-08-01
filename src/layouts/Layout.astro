@@ -41,6 +41,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="FarmaGuardia" />
@@ -154,7 +155,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       const reportFarmaciaId = document.getElementById('report-farmacia-id');
       const reportTurnoId = document.getElementById('report-turno-id');
 
-      function openReportModal(farmaciaId?: string, turnoId?: string) {
+      function openReportModal(farmaciaId, turnoId) {
         if (reportModal) {
           reportModal.classList.remove('hidden');
           reportModal.classList.add('flex');
