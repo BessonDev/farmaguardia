@@ -1,45 +1,35 @@
 ---
 import { formatCaracasDateTime } from '../utils/time';
-
-interface Props {
-  turnoActual?: {
-    farmacia: {
-      nombre: string;
-      direccion: string;
-      telefono?: string;
-      whatsapp?: string;
-      latitud?: number;
-      longitud?: number;
-    };
-    finTurno: string;
-  } | null;
-}
-const { turnoActual } = Astro.props;
 ---
 
-<header class="sticky top-0 z-40 bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-    <div class="flex items-center gap-3">
-      <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-      <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">FarmaGuardia</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Puerto Ayacucho, Amazonas</p>
+<header class="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <h1 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">FarmaGuardia</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Farmacias de turno · Puerto Ayacucho</p>
       </div>
     </div>
 
-    <div class="flex items-center gap-3 w-full sm:w-auto">
-      <div class="flex-1 sm:flex-none flex items-center gap-2">
-        <span class="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Actualizado:</span>
-        <time class="text-xs font-mono text-gray-600 dark:text-gray-300" id="current-time">
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <span class="relative flex w-2 h-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full w-2 h-2 bg-emerald-500"></span>
+        </span>
+        <time class="text-xs font-mono text-gray-600 dark:text-gray-300 tabular-nums" id="current-time">
           {formatCaracasDateTime(new Date())}
         </time>
       </div>
-      
-      <button 
+
+      <button
         id="theme-toggle"
-        class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        class="p-2.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-800"
         aria-label="Cambiar tema"
       >
         <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -51,27 +41,6 @@ const { turnoActual } = Astro.props;
       </button>
     </div>
   </div>
-
-  {turnoActual && (
-    <div class="mx-4 mb-3 sm:mx-0 sm:mb-0 sm:ml-4 sm:flex-1 sm:order-last">
-      <div class="bg-primary text-white rounded-lg p-3 sm:p-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <p class="text-xs font-medium opacity-90 uppercase tracking-wide">Abierto ahora</p>
-            <p class="font-semibold text-lg sm:text-xl">{turnoActual.farmacia.nombre}</p>
-            <p class="text-sm opacity-90 mt-0.5">{turnoActual.farmacia.direccion}</p>
-          </div>
-          <div class="flex items-center gap-2 text-right sm:flex-col sm:items-end">
-            <span class="inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-sm font-medium animate-pulse-slow">
-              <span class="w-2 h-2 bg-white rounded-full"></span>
-              ABIERTO
-            </span>
-            <p class="text-xs opacity-75">Hasta {formatCaracasDateTime(new Date(turnoActual.finTurno))}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )}
 </header>
 
 <script is:inline>

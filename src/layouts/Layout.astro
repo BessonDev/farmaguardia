@@ -1,6 +1,5 @@
 ---
 import '../styles/global.css';
-import { formatCaracasDateTime } from '../utils/time';
 
 interface Props {
   title?: string;
@@ -89,12 +88,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   <body class="h-full flex flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-50">
     <slot />
     
-    <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 py-4 px-4 sm:px-6">
-      <div class="max-w-4xl mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
+    <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 py-8 px-4 sm:px-6">
+      <div class="max-w-5xl mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
         <p>FarmaGuardia — Farmacias de turno en Puerto Ayacucho, Amazonas</p>
-        <p class="mt-1">
-          Datos actualizados: {formatCaracasDateTime(new Date())} (UTC-4)
-        </p>
         <p class="mt-2">
           <a href="/admin/login" class="underline hover:text-primary">Panel admin</a>
           {' · '}
