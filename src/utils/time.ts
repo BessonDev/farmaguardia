@@ -99,17 +99,13 @@ export function formatCaracasDate(date: Date): string {
 
 /**
  * Formatea la fecha completa en español (hora Caracas)
- * Ej: "jueves, 30 de julio de 2026"
+ * Ej: "sábado, 1 de agosto de 2026" (los "de" en minúscula)
  */
 export function formatCaracasFullDate(date: Date): string {
   const caracasDate = utcToCaracas(date);
-  return caracasDate.toLocaleDateString('es-VE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return `${dias[caracasDate.getUTCDay()]}, ${caracasDate.getUTCDate()} de ${meses[caracasDate.getUTCMonth()]} de ${caracasDate.getUTCFullYear()}`;
 }
 
 /**

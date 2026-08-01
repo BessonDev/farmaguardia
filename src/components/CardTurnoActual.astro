@@ -127,27 +127,29 @@ const mapEmbedUrl = tieneCoordenadas
           </svg>
           Cómo llegar
         </a>
+        {isCurrent && (
+          <button
+            type="button"
+            onclick={`window.FarmaGuardia?.openReportModal(${farmacia.id}, ${turnoId ?? 'null'})`}
+            class="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold rounded-xl transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Reportar farmacia
+          </button>
+        )}
       </div>
     </div>
 
     <!-- Turno info -->
-    <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+    <div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
       <span class="flex items-center gap-1.5">
         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         Turno hasta: <strong class="text-gray-900 dark:text-gray-100 font-semibold">{formatCaracasDateTime(new Date(finTurno))}</strong>
       </span>
-      <button
-        type="button"
-        onclick={`window.FarmaGuardia?.openReportModal(${farmacia.id}, ${turnoId ?? 'null'})`}
-        class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-      >
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        Reportar esta farmacia
-      </button>
     </div>
   </div>
 

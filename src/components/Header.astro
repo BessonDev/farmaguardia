@@ -1,5 +1,5 @@
 ---
-import { formatCaracasFullDate, formatCaracasTime } from '../utils/time';
+import { formatCaracasFullDate } from '../utils/time';
 ---
 
 <header class="sticky top-0 z-40 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
@@ -10,6 +10,9 @@ import { formatCaracasFullDate, formatCaracasTime } from '../utils/time';
           <span class="text-primary">Farma</span>Guardia
         </h1>
         <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Puerto Ayacucho, Amazonas</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">
+          {formatCaracasFullDate(new Date())}
+        </p>
       </div>
 
       <button
@@ -25,43 +28,5 @@ import { formatCaracasFullDate, formatCaracasTime } from '../utils/time';
         </svg>
       </button>
     </div>
-
-    <div class="mt-2 flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
-      <span class="relative flex w-2 h-2 shrink-0">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full w-2 h-2 bg-emerald-500"></span>
-      </span>
-      <time class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 capitalize truncate" id="current-time">
-        {formatCaracasFullDate(new Date())}
-      </time>
-      <span class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100 tabular-nums ml-auto shrink-0" id="current-clock">
-        {formatCaracasTime(new Date())}
-      </span>
-    </div>
   </div>
 </header>
-
-<script is:inline>
-  function updateTime() {
-    const dateEl = document.getElementById('current-time');
-    const clockEl = document.getElementById('current-clock');
-    if (dateEl || clockEl) {
-      const now = new Date();
-      const caracas = new Date(now.getTime() - 4 * 60 * 60 * 1000);
-      if (dateEl) {
-        dateEl.textContent = caracas.toLocaleDateString('es-VE', {
-          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-          timeZone: 'UTC'
-        });
-      }
-      if (clockEl) {
-        clockEl.textContent = caracas.toLocaleTimeString('es-VE', {
-          hour: '2-digit', minute: '2-digit', second: '2-digit',
-          hour12: false, timeZone: 'UTC'
-        });
-      }
-    }
-  }
-  updateTime();
-  setInterval(updateTime, 1000);
-</script>
