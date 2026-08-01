@@ -54,3 +54,12 @@
 :focus-visible {
   @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-white dark:ring-offset-gray-950;
 }
+
+/* Dark mode map (OpenStreetMap embed has no dark tile set without an API key) */
+.map-dark {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.6);
+}
+
+.dark .map-dark {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.6);
+}

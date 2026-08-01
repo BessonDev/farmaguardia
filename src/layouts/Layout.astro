@@ -5,9 +5,10 @@ interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
+  hideFooter?: boolean;
 }
 
-const { title = 'FarmaGuardia - Farmacias de Turno en Puerto Ayacucho', description = 'Consulta en tiempo real qué farmacia está de turno 24h en Puerto Ayacucho, Estado Amazonas. Contacto directo y ubicación.', ogImage = '/og-image.png', } = Astro.props;
+const { title = 'FarmaGuardia - Farmacias de Turno en Puerto Ayacucho', description = 'Consulta en tiempo real qué farmacia está de turno 24h en Puerto Ayacucho, Estado Amazonas. Contacto directo y ubicación.', ogImage = '/og-image.png', hideFooter = false, } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -89,11 +90,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   <body class="h-full flex flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-50">
     <slot />
     
-    <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 py-8 px-4 sm:px-6">
-      <div class="max-w-5xl mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>Hecho con amor para Puerto Ayacucho, Amazonas. Desarrollado por <a href="/admin/login" class="text-primary font-semibold hover:underline">BessonDev</a></p>
-      </div>
-    </footer>
+    {!hideFooter && (
+      <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 py-8 px-4 sm:px-6">
+        <div class="max-w-5xl mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
+          <p>Hecho con ❤ para Puerto Ayacucho, Amazonas. Desarrollado por <a href="/admin/login" class="text-primary font-semibold hover:underline">BessonDev</a></p>
+        </div>
+      </footer>
+    )}
 
     <!-- Modal de reporte (se hidrata en el cliente) -->
     <div id="report-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
