@@ -16,6 +16,7 @@
     "db:seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@astrojs/node": "^11.0.3",
     "astro": "^7.1.6",
     "autoprefixer": "^10.4.20",
     "better-sqlite3": "^11.8.1",
