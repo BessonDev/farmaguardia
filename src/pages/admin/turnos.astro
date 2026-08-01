@@ -96,7 +96,7 @@ const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
         </div>
       </div>
 
-      <main class="flex-1 p-4 sm:p-6 overflow-x-hidden">
+      <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Gestión de Turnos</h1>
 
         {result?.error && (

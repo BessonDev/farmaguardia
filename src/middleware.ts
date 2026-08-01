@@ -9,6 +9,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (action?.calledFrom === 'form') {
     const result = await action.handler();
     setActionResult(action.name, serializeActionResult(result));
+
+    // Re-verificar la sesión tras la acción (p.ej. logout) en rutas protegidas
+    const url = new URL(context.url);
+    if (url.pathname.startsWith('/admin') && !url.pathname.startsWith('/admin/login')) {
+      if (!verifySession(context.cookies)) {
+        return context.redirect('/admin/login');
+      }
+    }
     return next();
   }
 

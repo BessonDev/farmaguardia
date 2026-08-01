@@ -70,7 +70,7 @@ const editando = editId ? lista.find(f => f.id === Number(editId)) : null;
         </div>
       </div>
 
-      <main class="flex-1 p-4 sm:p-6 overflow-x-hidden">
+      <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Farmacias</h1>
           {!editando && (
