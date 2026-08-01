@@ -98,6 +98,21 @@ export function formatCaracasDate(date: Date): string {
 }
 
 /**
+ * Formatea la fecha completa en español (hora Caracas)
+ * Ej: "jueves, 30 de julio de 2026"
+ */
+export function formatCaracasFullDate(date: Date): string {
+  const caracasDate = utcToCaracas(date);
+  return caracasDate.toLocaleDateString('es-VE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/**
  * Crea una fecha UTC a partir de componentes de hora local Caracas
  * Útil para el panel admin: el usuario elige "2026-08-01 08:00" en Caracas
  * y esto lo convierte a UTC para guardar
