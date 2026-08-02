@@ -100,7 +100,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     {!hideFooter && (
       <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 py-8 px-4 sm:px-6">
         <div class="max-w-4xl mx-auto text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Hecho con ❤ para Puerto Ayacucho, Amazonas. Desarrollado por <a href="https://bessondev.com" target="_blank" class="text-primary font-semibold hover:underline">BessonDev</a></p>
+          <p>Hecho con ❤ para Puerto Ayacucho, Amazonas.</p>
+          <p>Desarrollado por <a href="https://bessondev.com" target="_blank" class="text-primary font-semibold hover:underline">BessonDev</a></p>
         </div>
       </footer>
     )}
@@ -282,12 +283,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       function formatCaracasTime(ts) {
         try {
           const d = new Date(ts);
-          return d.toLocaleTimeString('es-VE', {
+          const formatted = d.toLocaleTimeString('es-VE', {
             timeZone: 'America/Caracas',
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false,
+            hour12: true,
           });
+          return formatted.replace('a. m.', 'AM').replace('p. m.', 'PM');
         } catch (e) {
           return '';
         }

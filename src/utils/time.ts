@@ -53,34 +53,40 @@ export function parseUtcISO(isoString: string): Date {
 }
 
 /**
- * Formatea una fecha para mostrar en la UI (hora Caracas)
- * Ej: "01/08/2026 08:00"
+ * Formatea una fecha para mostrar en la UI (hora Caracas, formato 12h)
+ * Ej: "01/08/2026 08:00 AM"
  */
 export function formatCaracasDateTime(date: Date): string {
   const caracasDate = utcToCaracas(date);
-  return caracasDate.toLocaleString('es-VE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC', // ya está convertido
-  });
+  return caracasDate
+    .toLocaleString('es-VE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC', // ya está convertido
+    })
+    .replace('a. m.', 'AM')
+    .replace('p. m.', 'PM');
 }
 
 /**
- * Formatea solo la hora para mostrar (hora Caracas)
- * Ej: "08:00"
+ * Formatea solo la hora para mostrar (hora Caracas, formato 12h)
+ * Ej: "08:00 AM"
  */
 export function formatCaracasTime(date: Date): string {
   const caracasDate = utcToCaracas(date);
-  return caracasDate.toLocaleTimeString('es-VE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  });
+  return caracasDate
+    .toLocaleTimeString('es-VE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC',
+    })
+    .replace('a. m.', 'AM')
+    .replace('p. m.', 'PM');
 }
 
 /**

@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import AdminSidebar from '../../components/AdminSidebar.astro';
+import AdminModal from '../../components/AdminModal.astro';
 import { actions } from 'astro:actions';
 import { db } from '../../db';
 import { farmacias } from '../../db/schema';
@@ -9,13 +10,9 @@ import { eq, asc } from 'drizzle-orm';
 const result = Astro.getActionResult(actions.crearFarmacia) ?? Astro.getActionResult(actions.editarFarmacia) ?? Astro.getActionResult(actions.eliminarFarmacia);
 
 const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
-
-const url = new URL(Astro.url);
-const editId = url.searchParams.get('editar');
-const editando = editId ? lista.find(f => f.id === Number(editId)) : null;
 ---
 
-<Layout title="Farmacias - FarmaGuardia Admin">
+<Layout title="Farmacias - FarmaGuardia Admin" hideFooter>
   <div class="min-h-full flex">
     <AdminSidebar active="farmacias" />
 
@@ -31,11 +28,9 @@ const editando = editId ? lista.find(f => f.id === Number(editId)) : null;
       <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Farmacias</h1>
-          {!editando && (
-            <a href="#nueva" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
-              + Nueva
-            </a>
-          )}
+          <button type="button" data-open-nueva class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
+            + Nueva
+          </button>
         </div>
 
         {result?.error && (
@@ -48,73 +43,6 @@ const editando = editId ? lista.find(f => f.id === Number(editId)) : null;
             Operación exitosa.
           </div>
         )}
-
-        <!-- Formulario (nueva o editar) -->
-        <div id="nueva" class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-6 mb-8">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            {editando ? `Editar: ${editando.nombre}` : 'Nueva farmacia'}
-          </h2>
-          <form method="POST" action={editando ? actions.editarFarmacia : actions.crearFarmacia} class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {editando && <input type="hidden" name="id" value={editando.id} />}
-            <div class="sm:col-span-2">
-              <label for="nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
-              <input type="text" id="nombre" name="nombre" required value={editando?.nombre ?? ''} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-            </div>
-            <div class="sm:col-span-2">
-              <label for="direccion" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dirección *</label>
-              <input type="text" id="direccion" name="direccion" required value={editando?.direccion ?? ''} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-            </div>
-            <div class="sm:col-span-2">
-              <label for="imagenUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Imagen (URL)</label>
-              <input type="url" id="imagenUrl" name="imagenUrl" value={editando?.imagenUrl ?? ''} placeholder="https://ejemplo.com/foto-farmacia.jpg" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Se muestra en la tarjeta del turno actual y en el listado público.</p>
-            </div>
-            <div>
-              <label for="sector" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sector</label>
-              <input type="text" id="sector" name="sector" value={editando?.sector ?? 'Centro'} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-            </div>
-            <div>
-              <label for="telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
-              <input type="text" id="telefono" name="telefono" value={editando?.telefono ?? ''} placeholder="0248-5210171" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-            </div>
-            <div>
-              <label for="whatsapp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WhatsApp</label>
-              <input type="text" id="whatsapp" name="whatsapp" value={editando?.whatsapp ?? ''} placeholder="0412-1234567" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label for="latitud" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Latitud</label>
-                <input type="number" step="any" id="latitud" name="latitud" value={editando?.latitud ?? ''} placeholder="5.6667" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-              </div>
-              <div>
-                <label for="longitud" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitud</label>
-                <input type="number" step="any" id="longitud" name="longitud" value={editando?.longitud ?? ''} placeholder="-67.6333" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-              </div>
-            </div>
-            <div class="sm:col-span-2 flex flex-wrap items-center gap-4 pt-2">
-              <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                <input type="checkbox" name="delivery" {editando?.delivery ? 'checked' : ''} class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
-                Delivery disponible
-              </label>
-              {editando && (
-                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <input type="checkbox" name="activa" {editando?.activa ? 'checked' : ''} class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
-                  Activa
-                </label>
-              )}
-            </div>
-            <div class="sm:col-span-2 flex gap-3 pt-2">
-              <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
-                {editando ? 'Guardar cambios' : 'Crear farmacia'}
-              </button>
-              {editando && (
-                <a href="/admin/farmacias" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-                  Cancelar
-                </a>
-              )}
-            </div>
-          </form>
-        </div>
 
         <!-- Listado -->
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -144,7 +72,7 @@ const editando = editId ? lista.find(f => f.id === Number(editId)) : null;
                       </span>
                     </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
-                      <a href={`/admin/farmacias?editar=${f.id}`} class="text-primary hover:underline mr-3">Editar</a>
+                      <button type="button" data-editar={f.id} class="text-primary hover:underline mr-3">Editar</button>
                       <form method="POST" action={actions.eliminarFarmacia} class="inline" onsubmit="return confirm('¿Eliminar esta farmacia? Se eliminarán sus turnos.')">
                         <input type="hidden" name="id" value={f.id} />
                         <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Eliminar</button>
@@ -159,4 +87,114 @@ const editando = editId ? lista.find(f => f.id === Number(editId)) : null;
       </main>
     </div>
   </div>
+
+  <!-- Modal nueva/editar farmacia -->
+  <AdminModal title="Farmacia" id="modal-farmacia" size="lg">
+    <form id="farmacia-form" method="POST" action="?_action=crearFarmacia" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <input type="hidden" name="id" id="f-id" />
+      <div class="sm:col-span-2">
+        <label for="f-nombre" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre *</label>
+        <input type="text" id="f-nombre" name="nombre" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+      </div>
+      <div class="sm:col-span-2">
+        <label for="f-direccion" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dirección *</label>
+        <input type="text" id="f-direccion" name="direccion" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+      </div>
+      <div class="sm:col-span-2">
+        <label for="f-imagenUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Imagen (URL)</label>
+        <input type="url" id="f-imagenUrl" name="imagenUrl" placeholder="https://ejemplo.com/foto-farmacia.jpg" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Se muestra en la tarjeta del turno actual y en el listado público.</p>
+      </div>
+      <div>
+        <label for="f-sector" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sector</label>
+        <input type="text" id="f-sector" name="sector" value="Centro" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+      </div>
+      <div>
+        <label for="f-telefono" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono</label>
+        <input type="text" id="f-telefono" name="telefono" placeholder="0248-5210171" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+      </div>
+      <div>
+        <label for="f-whatsapp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">WhatsApp</label>
+        <input type="text" id="f-whatsapp" name="whatsapp" placeholder="0412-1234567" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="f-latitud" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Latitud</label>
+          <input type="number" step="any" id="f-latitud" name="latitud" placeholder="5.6667" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+        </div>
+        <div>
+          <label for="f-longitud" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitud</label>
+          <input type="number" step="any" id="f-longitud" name="longitud" placeholder="-67.6333" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+        </div>
+      </div>
+      <div class="sm:col-span-2 flex flex-wrap items-center gap-4 pt-2">
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" name="delivery" id="f-delivery" class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
+          Delivery disponible
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" name="activa" id="f-activa" checked class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
+          Activa
+        </label>
+      </div>
+      <div class="sm:col-span-2 flex gap-3 pt-2">
+        <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
+          Guardar
+        </button>
+        <button type="button" data-modal-close="modal-farmacia" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </AdminModal>
+
+  <script is:inline define:vars={{ farmaciasData: lista }}>
+    const form = document.getElementById('farmacia-form');
+    const modalTitle = document.querySelector('#modal-farmacia h2');
+    const f = {
+      id: document.getElementById('f-id'),
+      nombre: document.getElementById('f-nombre'),
+      direccion: document.getElementById('f-direccion'),
+      imagenUrl: document.getElementById('f-imagenUrl'),
+      sector: document.getElementById('f-sector'),
+      telefono: document.getElementById('f-telefono'),
+      whatsapp: document.getElementById('f-whatsapp'),
+      latitud: document.getElementById('f-latitud'),
+      longitud: document.getElementById('f-longitud'),
+      delivery: document.getElementById('f-delivery'),
+      activa: document.getElementById('f-activa'),
+    };
+
+    function openNueva() {
+      form.reset();
+      form.action = '?_action=crearFarmacia';
+      f.id.value = '';
+      f.sector.value = 'Centro';
+      f.activa.checked = true;
+      if (modalTitle) modalTitle.textContent = 'Nueva farmacia';
+      window.FarmaGuardiaAdmin.openModal('modal-farmacia');
+    }
+
+    function openEditar(id) {
+      const data = farmaciasData.find(x => x.id === id);
+      if (!data) return;
+      form.action = '?_action=editarFarmacia';
+      f.id.value = data.id;
+      f.nombre.value = data.nombre || '';
+      f.direccion.value = data.direccion || '';
+      f.imagenUrl.value = data.imagenUrl || '';
+      f.sector.value = data.sector || 'Centro';
+      f.telefono.value = data.telefono || '';
+      f.whatsapp.value = data.whatsapp || '';
+      f.latitud.value = data.latitud ?? '';
+      f.longitud.value = data.longitud ?? '';
+      f.delivery.checked = !!data.delivery;
+      f.activa.checked = !!data.activa;
+      if (modalTitle) modalTitle.textContent = `Editar: ${data.nombre}`;
+      window.FarmaGuardiaAdmin.openModal('modal-farmacia');
+    }
+
+    document.querySelectorAll('[data-open-nueva]').forEach(btn => btn.addEventListener('click', openNueva));
+    document.querySelectorAll('[data-editar]').forEach(btn => btn.addEventListener('click', () => openEditar(Number(btn.dataset.editar))));
+  </script>
 </Layout>

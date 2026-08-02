@@ -1,10 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import AdminSidebar from '../../components/AdminSidebar.astro';
+import AdminModal from '../../components/AdminModal.astro';
 import { actions } from 'astro:actions';
 import { db } from '../../db';
 import { farmacias, turnos } from '../../db/schema';
-import { eq, and, gt, gte, lte, asc, desc } from 'drizzle-orm';
+import { eq, and, gt, gte, lte, asc } from 'drizzle-orm';
 import { toUtcISO, nowUtc, toCaracasDateTimeLocal, formatCaracasDateTime } from '../../utils/time';
 
 const result = Astro.getActionResult(actions.crearTurno) ?? Astro.getActionResult(actions.editarTurno) ?? Astro.getActionResult(actions.eliminarTurno) ?? Astro.getActionResult(actions.overrideTurnoHoy);
@@ -46,14 +47,11 @@ const listaTurnos = await db
   .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
   .where(gte(turnos.inicio, ahoraISO))
   .orderBy(asc(turnos.inicio))
-  .limit(60);
-
-const url = new URL(Astro.url);
-const editId = url.searchParams.get('editar');
-const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
+  .limit(60)
+  .then(rows => rows.map(t => ({ ...t, inicioLocal: toCaracasDateTimeLocal(t.inicio), finLocal: toCaracasDateTimeLocal(t.fin) })));
 ---
 
-<Layout title="Turnos - FarmaGuardia Admin">
+<Layout title="Turnos - FarmaGuardia Admin" hideFooter>
   <div class="min-h-full flex">
     <AdminSidebar active="turnos" />
 
@@ -67,7 +65,12 @@ const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
       </div>
 
       <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Gestión de Turnos</h1>
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Gestión de Turnos</h1>
+          <button type="button" data-open-nuevo class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+            + Nuevo turno
+          </button>
+        </div>
 
         {result?.error && (
           <div class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
@@ -120,49 +123,6 @@ const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
           )}
         </div>
 
-        <!-- Formulario crear/editar turno -->
-        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-6 mb-8">
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            {editando ? `Editar turno #${editando.id}` : 'Nuevo turno'}
-          </h2>
-          <form method="POST" action={editando ? actions.editarTurno : actions.crearTurno} class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {editando && <input type="hidden" name="id" value={editando.id} />}
-            <div class="sm:col-span-2">
-              <label for="farmaciaId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Farmacia *</label>
-              <select id="farmaciaId" name="farmaciaId" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                <option value="">Seleccionar farmacia...</option>
-                {todasFarmacias.map(f => (
-                  <option value={f.id} selected={editando?.farmaciaId === f.id}>{f.nombre}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label for="inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inicio (hora Caracas) *</label>
-              <input type="datetime-local" id="inicio" name="inicio" required value={editando ? toCaracasDateTimeLocal(editando.inicio) : ''} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ej: turno estándar 08:00</p>
-            </div>
-            <div>
-              <label for="fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fin (hora Caracas) *</label>
-              <input type="datetime-local" id="fin" name="fin" required value={editando ? toCaracasDateTimeLocal(editando.fin) : ''} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ej: turno estándar 08:00 del día siguiente</p>
-            </div>
-            <div class="sm:col-span-2">
-              <label for="notas" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
-              <input type="text" id="notas" name="notas" value={editando?.notas ?? ''} placeholder="Ej: Turno especial de feriado" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-            </div>
-            <div class="sm:col-span-2 flex gap-3 pt-2">
-              <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
-                {editando ? 'Guardar cambios' : 'Crear turno'}
-              </button>
-              {editando && (
-                <a href="/admin/turnos" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-                  Cancelar
-                </a>
-              )}
-            </div>
-          </form>
-        </div>
-
         <!-- Listado de turnos -->
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
           <div class="px-4 sm:px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
@@ -188,7 +148,7 @@ const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
                     <td class="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">{formatCaracasDateTime(new Date(t.fin))}</td>
                     <td class="px-4 py-3 hidden lg:table-cell text-gray-500 dark:text-gray-400 max-w-[200px] truncate">{t.notas || '—'}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
-                      <a href={`/admin/turnos?editar=${t.id}`} class="text-primary hover:underline mr-3">Editar</a>
+                      <button type="button" data-editar={t.id} class="text-primary hover:underline mr-3">Editar</button>
                       <form method="POST" action={actions.eliminarTurno} class="inline" onsubmit="return confirm('¿Eliminar este turno?')">
                         <input type="hidden" name="id" value={t.id} />
                         <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Eliminar</button>
@@ -199,7 +159,7 @@ const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
                 {listaTurnos.length === 0 && (
                   <tr>
                     <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                      No hay turnos programados. Crea el primero arriba.
+                      No hay turnos programados. Crea el primero con "+ Nuevo turno".
                     </td>
                   </tr>
                 )}
@@ -210,4 +170,78 @@ const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
       </main>
     </div>
   </div>
+
+  <!-- Modal nuevo/editar turno -->
+  <AdminModal title="Turno" id="modal-turno" size="md">
+    <form id="turno-form" method="POST" action="?_action=crearTurno" class="grid grid-cols-1 gap-4">
+      <input type="hidden" name="id" id="t-id" />
+      <div>
+        <label for="t-farmaciaId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Farmacia *</label>
+        <select id="t-farmaciaId" name="farmaciaId" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <option value="">Seleccionar farmacia...</option>
+          {todasFarmacias.map(f => (
+            <option value={f.id}>{f.nombre}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label for="t-inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inicio (hora Caracas) *</label>
+        <input type="datetime-local" id="t-inicio" name="inicio" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ej: turno estándar 08:00</p>
+      </div>
+      <div>
+        <label for="t-fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fin (hora Caracas) *</label>
+        <input type="datetime-local" id="t-fin" name="fin" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ej: turno estándar 08:00 del día siguiente</p>
+      </div>
+      <div>
+        <label for="t-notas" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
+        <input type="text" id="t-notas" name="notas" placeholder="Ej: Turno especial de feriado" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
+          Guardar
+        </button>
+        <button type="button" data-modal-close="modal-turno" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </AdminModal>
+
+  <script is:inline define:vars={{ turnosData: listaTurnos }}>
+    const form = document.getElementById('turno-form');
+    const modalTitle = document.querySelector('#modal-turno h2');
+    const t = {
+      id: document.getElementById('t-id'),
+      farmaciaId: document.getElementById('t-farmaciaId'),
+      inicio: document.getElementById('t-inicio'),
+      fin: document.getElementById('t-fin'),
+      notas: document.getElementById('t-notas'),
+    };
+
+    function openNuevo() {
+      form.reset();
+      form.action = '?_action=crearTurno';
+      t.id.value = '';
+      if (modalTitle) modalTitle.textContent = 'Nuevo turno';
+      window.FarmaGuardiaAdmin.openModal('modal-turno');
+    }
+
+    function openEditar(id) {
+      const data = turnosData.find(x => x.id === id);
+      if (!data) return;
+      form.action = '?_action=editarTurno';
+      t.id.value = data.id;
+      t.farmaciaId.value = data.farmaciaId;
+      t.inicio.value = data.inicioLocal;
+      t.fin.value = data.finLocal;
+      t.notas.value = data.notas || '';
+      if (modalTitle) modalTitle.textContent = `Editar turno #${data.id}`;
+      window.FarmaGuardiaAdmin.openModal('modal-turno');
+    }
+
+    document.querySelectorAll('[data-open-nuevo]').forEach(btn => btn.addEventListener('click', openNuevo));
+    document.querySelectorAll('[data-editar]').forEach(btn => btn.addEventListener('click', () => openEditar(Number(btn.dataset.editar))));
+  </script>
 </Layout>

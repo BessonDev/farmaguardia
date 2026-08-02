@@ -4,7 +4,7 @@ import AdminSidebar from '../../components/AdminSidebar.astro';
 import { db } from '../../db';
 import { farmacias, turnos } from '../../db/schema';
 import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
-import { createUtcFromCaracas, toUtcISO, utcToCaracas } from '../../utils/time';
+import { createUtcFromCaracas, toUtcISO, formatCaracasDateTime } from '../../utils/time';
 
 const PAGE_SIZE = 50;
 const url = new URL(Astro.url);
@@ -79,7 +79,7 @@ function pageUrl(params: Record<string, string>): string {
 }
 ---
 
-<Layout title="Historial de Turnos - FarmaGuardia Admin">
+<Layout title="Historial de Turnos - FarmaGuardia Admin" hideFooter>
   <div class="min-h-full flex">
     <AdminSidebar active="historial" />
 
@@ -150,10 +150,10 @@ function pageUrl(params: Record<string, string>): string {
                       {t.sector && <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">· {t.sector}</span>}
                     </td>
                     <td class="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                      {new Intl.DateTimeFormat('es-VE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(utcToCaracas(t.inicio))}
+                      {formatCaracasDateTime(new Date(t.inicio))}
                     </td>
                     <td class="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                      {new Intl.DateTimeFormat('es-VE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(utcToCaracas(t.fin))}
+                      {formatCaracasDateTime(new Date(t.fin))}
                     </td>
                     <td class="px-4 py-3 hidden lg:table-cell text-gray-500 dark:text-gray-400 max-w-[200px] truncate">{t.notas || '—'}</td>
                   </tr>

@@ -112,6 +112,7 @@ export const server = {
       latitud: z.string().optional().default(''),
       longitud: z.string().optional().default(''),
       delivery: z.string().optional(),
+      activa: z.string().optional(),
     }),
     handler: async (input) => {
       await db.insert(farmacias).values({
@@ -124,6 +125,7 @@ export const server = {
         latitud: input.latitud ? Number(input.latitud) : null,
         longitud: input.longitud ? Number(input.longitud) : null,
         delivery: input.delivery === 'on',
+        activa: input.activa === 'on',
       });
       return { ok: true };
     },
@@ -543,6 +545,181 @@ export const server = {
       }
 
       return { ok: true };
+    },
+  }),
+
+  // ─── Importar turnos (Excel/CSV) ───
+  importarTurnos: defineAction({
+    accept: 'form',
+    input: z.object({
+      archivo: z.instanceof(File),
+      sobreescribir: z.string().optional(),
+    }),
+    handler: async (input) => {
+      const buffer = Buffer.from(await input.archivo.arrayBuffer());
+
+      // Detectar formato por magic bytes: XLSX es un ZIP (PK), CSV es texto plano
+      const esXlsx = buffer.length > 2 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+
+      let filas: (string | number | boolean | Date | null)[][] = [];
+
+      if (esXlsx) {
+        const { readSheet } = await import('read-excel-file/node');
+        try {
+          filas = await readSheet(buffer);
+        } catch {
+          return { error: 'No se pudo leer el archivo .xlsx. Verifica que sea un Excel válido.' };
+        }
+      } else {
+        filas = parseCsvClean(buffer.toString('utf-8'));
+      }
+
+      if (filas.length < 2) {
+        return { error: 'El archivo no tiene datos. Usa la plantilla descargable.' };
+      }
+
+      const header = filas[0].map(c => String(c).toLowerCase().trim());
+      const col = {
+        farmacia: header.indexOf('farmacia'),
+        fecha: header.indexOf('fecha'),
+        inicio: header.indexOf('hora_inicio') >= 0 ? header.indexOf('hora_inicio') : header.indexOf('inicio'),
+        fin: header.indexOf('hora_fin') >= 0 ? header.indexOf('hora_fin') : header.indexOf('fin'),
+        notas: header.indexOf('notas'),
+      };
+
+      if (col.farmacia === -1 || col.fecha === -1 || col.inicio === -1 || col.fin === -1) {
+        return { error: 'El archivo debe tener al menos las columnas "farmacia", "fecha", "hora_inicio" y "hora_fin".' };
+      }
+
+      // Mapa de farmacias por nombre para resolución
+      const catalogo = await db.select({ id: farmacias.id, nombre: farmacias.nombre }).from(farmacias);
+      const porNombre = new Map(catalogo.map(f => [f.nombre.trim().toLowerCase(), f.id]));
+
+      // Helpers de normalización
+      function extraerFecha(celda: unknown): { year: number; month: number; day: number } | null {
+        if (celda instanceof Date && !isNaN(celda.getTime())) {
+          return { year: celda.getUTCFullYear(), month: celda.getUTCMonth() + 1, day: celda.getUTCDate() };
+        }
+        if (typeof celda === 'string') {
+          const s = celda.trim();
+          // YYYY-MM-DD
+          let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+          if (m) return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+          // DD/MM/YYYY o DD-MM-YYYY
+          m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+          if (m) return { year: Number(m[3]), month: Number(m[2]), day: Number(m[1]) };
+        }
+        return null;
+      }
+
+      function extraerHora(celda: unknown): { hours: number; minutes: number } | null {
+        if (celda instanceof Date && !isNaN(celda.getTime())) {
+          return { hours: celda.getUTCHours(), minutes: celda.getUTCMinutes() };
+        }
+        if (typeof celda === 'number') {
+          // Serial de Excel: fracción del día
+          const horas = celda * 24;
+          const h = Math.floor(horas);
+          const m = Math.round((horas - h) * 60) % 60;
+          return { hours: h, minutes: m };
+        }
+        if (typeof celda === 'string') {
+          const s = celda.trim().toLowerCase();
+          const match = s.match(/^(\d{1,2}):(\d{2})/);
+          if (!match) return null;
+          let hours = Number(match[1]);
+          const minutes = Number(match[2]);
+          if (s.includes('pm') && hours < 12) hours += 12;
+          if (s.includes('am') && hours === 12) hours = 0;
+          return { hours, minutes };
+        }
+        return null;
+      }
+
+      const resultados = { creados: 0, actualizados: 0, omitidos: 0, errores: [] as string[] };
+
+      for (let i = 1; i < filas.length; i++) {
+        const f = filas[i];
+        const nombre = col.farmacia >= 0 && f[col.farmacia] != null ? String(f[col.farmacia]).trim() : '';
+        const numFila = i + 1;
+
+        if (!nombre) {
+          resultados.errores.push(`Fila ${numFila}: farmacia vacía`);
+          continue;
+        }
+
+        const farmaciaId = porNombre.get(nombre.toLowerCase());
+        if (!farmaciaId) {
+          resultados.errores.push(`Fila ${numFila}: no existe la farmacia "${nombre}"`);
+          continue;
+        }
+
+        const fecha = extraerFecha(f[col.fecha]);
+        const horaInicio = extraerHora(f[col.inicio]);
+        const horaFin = extraerHora(f[col.fin]);
+
+        if (!fecha || !horaInicio || !horaFin) {
+          resultados.errores.push(`Fila ${numFila}: fecha u hora inválida (usa AAAA-MM-DD y HH:MM)`);
+          continue;
+        }
+
+        const notas = col.notas >= 0 && f[col.notas] != null ? String(f[col.notas]).trim() : '';
+
+        // Si fin <= inicio, el turno cruza a la mañana siguiente (ej 08:00 → 08:00)
+        const finSiguiente =
+          horaFin.hours < horaInicio.hours ||
+          (horaFin.hours === horaInicio.hours && horaFin.minutes <= horaInicio.minutes);
+
+        const inicioISO = toUtcISO(createUtcFromCaracas(fecha.year, fecha.month, fecha.day, horaInicio.hours, horaInicio.minutes));
+        const finISO = toUtcISO(createUtcFromCaracas(
+          fecha.year,
+          fecha.month,
+          fecha.day + (finSiguiente ? 1 : 0),
+          horaFin.hours,
+          horaFin.minutes
+        ));
+
+        // Solapamiento por farmacia (misma lógica que crearTurno)
+        const overlap = await db
+          .select({ id: turnos.id })
+          .from(turnos)
+          .where(and(
+            lt(turnos.inicio, finISO),
+            gt(turnos.fin, inicioISO),
+            eq(turnos.farmaciaId, farmaciaId)
+          ))
+          .limit(1);
+
+        if (overlap.length > 0) {
+          // Con "sobreescribir": reemplazar el turno que empieza igual
+          const mismoInicio = await db
+            .select({ id: turnos.id })
+            .from(turnos)
+            .where(and(
+              eq(turnos.farmaciaId, farmaciaId),
+              eq(turnos.inicio, inicioISO)
+            ))
+            .limit(1);
+
+          if (input.sobreescribir && mismoInicio.length > 0) {
+            await db.update(turnos).set({ fin: finISO, notas: notas || null }).where(eq(turnos.id, mismoInicio[0].id));
+            resultados.actualizados++;
+          } else {
+            resultados.omitidos++;
+            resultados.errores.push(`Fila ${numFila}: "${nombre}" solapa con un turno existente${input.sobreescribir ? '' : ' (usa "sobreescribir" para reemplazar)'}`);
+          }
+        } else {
+          await db.insert(turnos).values({
+            farmaciaId,
+            inicio: inicioISO,
+            fin: finISO,
+            notas: notas || null,
+          });
+          resultados.creados++;
+        }
+      }
+
+      return { ok: true, ...resultados };
     },
   }),
 };

@@ -1,0 +1,66 @@
+---
+interface Props {
+  title: string;
+  id: string;
+  size?: 'md' | 'lg';
+}
+
+const { title, id, size = 'md' } = Astro.props;
+const maxWidth = size === 'lg' ? 'max-w-2xl' : 'max-w-md';
+---
+
+<div id={id} class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+  <div id={`${id}-backdrop`} data-modal-backdrop={id} class="fixed inset-0 bg-black/50" aria-hidden="true"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class={`w-full ${maxWidth} bg-white dark:bg-gray-900 rounded-xl shadow-xl max-h-[90vh] overflow-y-auto`}>
+      <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-800">
+        <h2 id={`${id}-title`} class="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <button type="button" data-modal-close={id} class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Cerrar">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="px-5 py-4">
+        <slot />
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+  }
+  function closeModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  // Cerrar con backdrop, botón X o tecla Escape
+  document.querySelectorAll<HTMLElement>('[data-modal-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.modalClose!));
+  });
+  document.querySelectorAll<HTMLElement>('[data-modal-backdrop]').forEach(bg => {
+    bg.addEventListener('click', () => closeModal(bg.dataset.modalBackdrop!));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll<HTMLElement>('.fixed.inset-0.z-50:not(.hidden)').forEach(m => {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+      });
+    }
+  });
+
+  window.FarmaGuardiaAdmin = { openModal, closeModal };
+</script>
