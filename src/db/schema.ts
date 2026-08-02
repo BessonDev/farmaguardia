@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, real } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, real, unique } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const farmacias = sqliteTable('farmacias', {
@@ -30,8 +30,19 @@ export const reportes = sqliteTable('reportes', {
   turnoId: integer('turno_id').references(() => turnos.id, { onDelete: 'set null' }),
   tipo: text('tipo').notNull(), // 'cerrada' | 'datos_incorrectos' | 'otro'
   detalle: text('detalle'),
+  confirmaciones: integer('confirmaciones').notNull().default(1),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const reporteConfirmaciones = sqliteTable('reporte_confirmaciones', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  reporteId: integer('reporte_id').notNull().references(() => reportes.id, { onDelete: 'cascade' }),
+  huellaLocal: text('huella_local').notNull(),
+  ipHash: text('ip_hash').notNull(),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  reporteHuellaUnique: unique('reporte_huella_unique').on(table.reporteId, table.huellaLocal),
+}));
 
 export type Farmacia = typeof farmacias.$inferSelect;
 export type NewFarmacia = typeof farmacias.$inferInsert;
@@ -39,3 +50,5 @@ export type Turno = typeof turnos.$inferSelect;
 export type NewTurno = typeof turnos.$inferInsert;
 export type Reporte = typeof reportes.$inferSelect;
 export type NewReporte = typeof reportes.$inferInsert;
+export type ReporteConfirmacion = typeof reporteConfirmaciones.$inferSelect;
+export type NewReporteConfirmacion = typeof reporteConfirmaciones.$inferInsert;

@@ -504,15 +504,25 @@ export const server = {
       turnoId: z.coerce.number().optional().nullable(),
       tipo: z.enum(['cerrada', 'datos_incorrectos', 'otro']),
       detalle: z.string().optional().default(''),
+      huellaLocal: z.string().optional().default(''),
     }),
     handler: async (input) => {
-      const { reportes } = await import('../db/schema');
-      await db.insert(reportes).values({
+      const { reportes, reporteConfirmaciones } = await import('../db/schema');
+      const insert = await db.insert(reportes).values({
         farmaciaId: input.farmaciaId || null,
         turnoId: input.turnoId || null,
         tipo: input.tipo,
         detalle: input.detalle || null,
-      });
+      }).returning({ id: reportes.id });
+
+      // Registrar la confirmación del autor si hay huella
+      if (input.huellaLocal && insert.length > 0) {
+        await db.insert(reporteConfirmaciones).values({
+          reporteId: insert[0].id,
+          huellaLocal: input.huellaLocal,
+          ipHash: 'accion-admin',
+        }).onConflictDoNothing();
+      }
 
       // Intentar enviar a Telegram (no crítico si falla)
       if (input.farmaciaId) {

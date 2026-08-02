@@ -152,6 +152,21 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         });
       }
 
+      function getHuellaLocal() {
+        try {
+          let h = localStorage.getItem('fg:huella');
+          if (!h) {
+            const bytes = new Uint8Array(16);
+            crypto.getRandomValues(bytes);
+            h = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+            localStorage.setItem('fg:huella', h);
+          }
+          return h;
+        } catch (e) {
+          return 'anon-' + Math.random().toString(36).slice(2);
+        }
+      }
+
       // Report modal
       const reportBtn = document.getElementById('report-btn');
       const reportModal = document.getElementById('report-modal');
@@ -192,6 +207,8 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         reportForm.addEventListener('submit', async (e) => {
           e.preventDefault();
           const formData = new FormData(reportForm);
+          const payload = Object.fromEntries(formData);
+          payload.huella_local = getHuellaLocal();
           const submitBtn = reportForm.querySelector('button[type="submit"]');
           const originalText = submitBtn?.textContent;
           submitBtn.disabled = true;
@@ -200,12 +217,15 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
             const res = await fetch('/api/reportes', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(Object.fromEntries(formData)),
+              body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (data.ok) {
-              alert('¡Gracias! Tu reporte ha sido enviado.');
+              alert(data.confirmado
+                ? '¡Gracias! Tu confirmación fue registrada.'
+                : '¡Gracias! Tu reporte ha sido enviado.');
               closeReportModal();
+              window.location.reload();
             } else {
               alert('Error: ' + (data.error || 'No se pudo enviar el reporte'));
             }
@@ -218,8 +238,29 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         });
       }
 
+      async function confirmarReporte(reporteId, farmaciaId, turnoId) {
+        try {
+          const res = await fetch('/api/reportes/confirmar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reporte_id: reporteId, huella_local: getHuellaLocal() }),
+          });
+          const data = await res.json();
+          if (data.ok) {
+            alert(data.yaConfirmado
+              ? 'Ya habías confirmado este reporte. ¡Gracias!'
+              : `Confirmación registrada. ${data.confirmaciones} ${data.confirmaciones === 1 ? 'persona' : 'personas'} lo reportaron.`);
+            window.location.reload();
+          } else {
+            alert('Error: ' + (data.error || 'No se pudo confirmar'));
+          }
+        } catch {
+          alert('Error de conexión. Intenta de nuevo.');
+        }
+      }
+
       // Exponer para uso desde componentes
-      window.FarmaGuardia = { openReportModal };
+      window.FarmaGuardia = { openReportModal, confirmarReporte };
 
       // Service Worker (offline)
       if ('serviceWorker' in navigator) {

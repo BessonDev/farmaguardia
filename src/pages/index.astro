@@ -4,8 +4,8 @@ import Header from '../components/Header.astro';
 import CardTurnoActual from '../components/CardTurnoActual.astro';
 import ListaProximosTurnos from '../components/ListaProximosTurnos.astro';
 import { db } from '../db';
-import { farmacias, turnos } from '../db/schema';
-import { eq, and, gte, lte, gt, sql } from 'drizzle-orm';
+import { farmacias, turnos, reportes } from '../db/schema';
+import { eq, and, gte, lte, gt, inArray } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime } from '../utils/time';
 
 export const prerender = false;
@@ -43,7 +43,28 @@ const turnosActivos = await db
   ))
   .orderBy(turnos.inicio);
 
-// Próximos 7 días (excluyendo el actual si ya se muestra)
+// Reportes de los turnos activos (para badge de confirmación)
+const turnosActivosIds = turnosActivos.map(t => t.id);
+const reportesActivos = turnosActivosIds.length > 0
+  ? await db
+      .select({
+        id: reportes.id,
+        turnoId: reportes.turnoId,
+        tipo: reportes.tipo,
+        detalle: reportes.detalle,
+        confirmaciones: reportes.confirmaciones,
+        createdAt: reportes.createdAt,
+      })
+      .from(reportes)
+      .where(inArray(reportes.turnoId, turnosActivosIds))
+      .orderBy(reportes.confirmaciones)
+  : [];
+const reportesPorTurno = new Map<number, typeof reportesActivos[number]>();
+for (const r of reportesActivos) {
+  if (r.turnoId !== null && !reportesPorTurno.has(r.turnoId)) {
+    reportesPorTurno.set(r.turnoId, r);
+  }
+}
 const finSemana = new Date(ahora);
 finSemana.setUTCDate(finSemana.getUTCDate() + 7);
 finSemana.setUTCHours(23, 59, 59, 999);
@@ -117,6 +138,7 @@ const EMERGENCIAS = [
               turnoId={turno.id}
               finTurno={turno.fin}
               isCurrent={true}
+              reporte={reportesPorTurno.get(turno.id)}
             />
           ))}
         </div>

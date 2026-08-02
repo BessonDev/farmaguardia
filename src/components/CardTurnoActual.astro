@@ -17,8 +17,14 @@ interface Props {
   turnoId?: number;
   finTurno: string;
   isCurrent: boolean;
+  reporte?: {
+    id: number;
+    tipo: string;
+    confirmaciones: number;
+    detalle?: string;
+  };
 }
-const { farmacia, turnoId, finTurno, isCurrent } = Astro.props;
+const { farmacia, turnoId, finTurno, isCurrent, reporte } = Astro.props;
 
 const tieneCoordenadas = typeof farmacia.latitud === 'number' && typeof farmacia.longitud === 'number';
 
@@ -58,7 +64,7 @@ const mapEmbedUrl = tieneCoordenadas
       </div>
     )}
     {isCurrent && (
-      <div class="absolute top-3 left-3">
+      <div class="absolute top-3 left-3 flex flex-col gap-2">
         <span class="inline-flex items-center gap-1.5 bg-emerald-500 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold shadow-lg">
           <span class="relative flex w-2 h-2">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -66,6 +72,14 @@ const mapEmbedUrl = tieneCoordenadas
           </span>
           Abierto ahora
         </span>
+        {reporte && (
+          <span class="inline-flex items-center gap-1.5 bg-red-500 text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold shadow-lg">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Reportada ({reporte.confirmaciones})
+          </span>
+        )}
       </div>
     )}
   </div>
@@ -157,17 +171,43 @@ const mapEmbedUrl = tieneCoordenadas
   </div>
 
   {isCurrent && (
-    <div class="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-gray-100 dark:border-gray-800">
-      <button
-        type="button"
-        onclick={`window.FarmaGuardia?.openReportModal(${farmacia.id}, ${turnoId ?? 'null'})`}
-        class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold rounded-xl transition-colors"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        Reportar farmacia
-      </button>
+    <div class="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-gray-100 dark:border-gray-800 space-y-2">
+      {reporte ? (
+        <>
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-sm">
+            <p class="text-red-700 dark:text-red-300 font-medium flex items-center gap-2">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              {reporte.confirmaciones} {reporte.confirmaciones === 1 ? 'persona reportó' : 'personas reportaron'} que esta farmacia no estaba disponible.
+            </p>
+            {reporte.detalle && (
+              <p class="text-red-600 dark:text-red-400 mt-1 text-xs">"{reporte.detalle}"</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onclick={`window.FarmaGuardia?.confirmarReporte(${reporte.id}, ${farmacia.id}, ${turnoId ?? 'null'})`}
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold rounded-xl transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Yo también lo reporté
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onclick={`window.FarmaGuardia?.openReportModal(${farmacia.id}, ${turnoId ?? 'null'})`}
+          class="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold rounded-xl transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          Reportar farmacia
+        </button>
+      )}
     </div>
   )}
 </div>
