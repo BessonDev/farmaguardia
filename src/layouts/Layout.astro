@@ -88,6 +88,13 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     }, null, 2)} />
   </head>
   <body class="h-full flex flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+    <!-- Aviso offline: datos guardados en caché -->
+    <div id="offline-notice" class="hidden w-full items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800" role="status">
+      <svg class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>Sin conexión — datos guardados de las <span id="offline-notice-time" class="font-semibold"></span></span>
+    </div>
     <slot />
     
     {!hideFooter && (
@@ -213,6 +220,66 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
       // Exponer para uso desde componentes
       window.FarmaGuardia = { openReportModal };
+
+      // Service Worker (offline)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+
+      // Aviso "Datos de HH:MM" cuando se navega con datos cacheados
+      const offlineNotice = document.getElementById('offline-notice');
+      const offlineTime = document.getElementById('offline-notice-time');
+      let dataTimestamp = null;
+
+      try {
+        const raw = localStorage.getItem('fg:dataAt');
+        if (raw) dataTimestamp = parseInt(raw, 10);
+      } catch (e) {}
+
+      function formatCaracasTime(ts) {
+        try {
+          const d = new Date(ts);
+          return d.toLocaleTimeString('es-VE', {
+            timeZone: 'America/Caracas',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function showOfflineNotice() {
+        if (!offlineNotice) return;
+        if (dataTimestamp && offlineTime) offlineTime.textContent = formatCaracasTime(dataTimestamp);
+        offlineNotice.classList.remove('hidden');
+        offlineNotice.classList.add('flex');
+      }
+
+      function hideOfflineNotice() {
+        if (!offlineNotice) return;
+        offlineNotice.classList.add('hidden');
+        offlineNotice.classList.remove('flex');
+      }
+
+      // Si no hay conexión al cargar, mostrar el aviso con la última hora de datos
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        showOfflineNotice();
+      }
+      window.addEventListener('offline', showOfflineNotice);
+      window.addEventListener('online', hideOfflineNotice);
+
+      // Registrar la hora de la última carga exitosa de datos (para el aviso)
+      window.addEventListener('load', () => {
+        if (typeof navigator !== 'undefined' && navigator.onLine === true) {
+          try {
+            localStorage.setItem('fg:dataAt', String(Date.now()));
+          } catch (e) {}
+        }
+      });
     </script>
   </body>
 </html>
