@@ -15,6 +15,13 @@
       "when": 1785634605927,
       "tag": "0001_easy_unicorn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785635021206,
+      "tag": "0002_fuzzy_hiroim",
+      "breakpoints": true
     }
   ]
 }

@@ -176,3 +176,23 @@ const EMERGENCIAS = [
     <ListaProximosTurnos turnos={proximosTurnos} />
   </main>
 </Layout>
+
+<script>
+  // Analytics simple: registrar visita (fire-and-forget con keepalive)
+  window.addEventListener('load', () => {
+    try {
+      if (navigator.onLine === false) return;
+      const payload = JSON.stringify({ ruta: '/' });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon('/api/visita', new Blob([payload], { type: 'application/json' }));
+      } else {
+        fetch('/api/visita', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch (e) {}
+  });
+</script>

@@ -2,8 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import AdminSidebar from '../../components/AdminSidebar.astro';
 import { db } from '../../db';
-import { farmacias, turnos, reportes } from '../../db/schema';
-import { eq, and, gte, lte, sql } from 'drizzle-orm';
+import { farmacias, turnos, reportes, visitas } from '../../db/schema';
+import { eq, and, gte, lte, sql, gt } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime } from '../../utils/time';
 
 const ahoraISO = toUtcISO(nowUtc());
@@ -47,6 +47,61 @@ const totalTurnos = (await db.select({ count: sql`count(*)` }).from(turnos))[0].
 const totalReportes = (await db.select({ count: sql`count(*)` }).from(reportes))[0].count;
 
 const farmaciasActivas = await db.select().from(farmacias).where(eq(farmacias.activa, 1));
+
+// ─── Analytics ───
+const hace7Dias = new Date();
+hace7Dias.setUTCDate(hace7Dias.getUTCDate() - 7);
+
+// Visitas por día (últimos 7 días, hora Caracas)
+const visitasPorDia = await db
+  .select({
+    dia: sql<string>`date(datetime(${visitas.createdAt}, '-4 hours'))`,
+    total: sql<number>`count(*)`,
+  })
+  .from(visitas)
+  .where(gte(visitas.createdAt, toUtcISO(hace7Dias)))
+  .groupBy(sql`date(datetime(${visitas.createdAt}, '-4 hours'))`)
+  .orderBy(sql`date(datetime(${visitas.createdAt}, '-4 hours'))`);
+
+const totalVisitasSemana = visitasPorDia.reduce((acc, v) => acc + Number(v.total), 0);
+const maxVisitasDia = Math.max(1, ...visitasPorDia.map(v => Number(v.total)));
+
+// Horarios pico (visitas por hora Caracas, últimos 7 días)
+const visitasPorHora = await db
+  .select({
+    hora: sql<string>`strftime('%H', datetime(${visitas.createdAt}, '-4 hours'))`,
+    total: sql<number>`count(*)`,
+  })
+  .from(visitas)
+  .where(gte(visitas.createdAt, toUtcISO(hace7Dias)))
+  .groupBy(sql`strftime('%H', datetime(${visitas.createdAt}, '-4 hours'))`)
+  .orderBy(sql`strftime('%H', datetime(${visitas.createdAt}, '-4 hours'))`);
+
+const maxVisitasHora = Math.max(1, ...visitasPorHora.map(v => Number(v.total)));
+
+// Reportes por día (últimos 7 días)
+const reportesPorDia = await db
+  .select({
+    dia: sql<string>`date(datetime(${reportes.createdAt}, '-4 hours'))`,
+    total: sql<number>`count(*)`,
+  })
+  .from(reportes)
+  .where(gte(reportes.createdAt, toUtcISO(hace7Dias)))
+  .groupBy(sql`date(datetime(${reportes.createdAt}, '-4 hours'))`)
+  .orderBy(sql`date(datetime(${reportes.createdAt}, '-4 hours'))`);
+
+const maxReportesDia = Math.max(1, ...reportesPorDia.map(v => Number(v.total)));
+
+// Helper para nombre corto de día en Caracas
+const NOMBRES_DIA = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+function diaCorto(iso: string): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  const caracas = new Date(d.getTime() - 4 * 3600 * 1000);
+  return NOMBRES_DIA[caracas.getUTCDay()];
+}
+function horaCaracasLabel(hora: string): string {
+  return `${hora}:00`;
+}
 ---
 
 <Layout title="Dashboard - FarmaGuardia Admin">
@@ -138,6 +193,81 @@ const farmaciasActivas = await db.select().from(farmacias).where(eq(farmacias.ac
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Analytics (últimos 7 días)</h2>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+            <!-- Visitas por día -->
+            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Visitas por día</h3>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{totalVisitasSemana} en total</span>
+              </div>
+              {visitasPorDia.length > 0 ? (
+                <div class="flex items-end gap-2 h-24">
+                  {visitasPorDia.map(v => (
+                    <div class="flex-1 flex flex-col items-center gap-1 min-w-0">
+                      <span class="text-[10px] text-gray-500 dark:text-gray-400">{Number(v.total)}</span>
+                      <div
+                        class="w-full bg-primary/80 rounded-t"
+                        style={`height: ${Math.max(4, (Number(v.total) / maxVisitasDia) * 60)}px`}
+                      ></div>
+                      <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate">{diaCorto(v.dia)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">Sin visitas registradas aún.</p>
+              )}
+            </div>
+
+            <!-- Horarios pico -->
+            <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+              <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Horarios pico (hora Caracas)</h3>
+              {visitasPorHora.length > 0 ? (
+                <div class="flex items-end gap-1 h-24">
+                  {visitasPorHora.map(v => (
+                    <div class="flex-1 flex flex-col items-center gap-1 min-w-0" title={`${horaCaracasLabel(v.hora)}: ${Number(v.total)} visitas`}>
+                      <div
+                        class="w-full bg-emerald-500/80 rounded-t"
+                        style={`height: ${Math.max(4, (Number(v.total) / maxVisitasHora) * 60)}px`}
+                      ></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p class="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">Sin datos de horarios aún.</p>
+              )}
+              {visitasPorHora.length > 0 && (
+                <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-2">
+                  0h → 23h · el más alto: {visitasPorHora.reduce((a, b) => Number(b.total) > Number(a.total) ? b : a).hora}:00
+                </p>
+              )}
+            </div>
+          </div>
+
+          <!-- Reportes por día -->
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Reportes comunitarios por día</h3>
+            {reportesPorDia.length > 0 ? (
+              <div class="flex items-end gap-2 h-20">
+                {reportesPorDia.map(v => (
+                  <div class="flex-1 flex flex-col items-center gap-1 min-w-0">
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400">{Number(v.total)}</span>
+                    <div
+                      class="w-full bg-red-500/80 rounded-t"
+                      style={`height: ${Math.max(4, (Number(v.total) / maxReportesDia) * 48)}px`}
+                    ></div>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate">{diaCorto(v.dia)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p class="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Sin reportes en los últimos 7 días.</p>
+            )}
           </div>
         </div>
       </main>

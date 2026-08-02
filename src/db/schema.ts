@@ -44,6 +44,12 @@ export const reporteConfirmaciones = sqliteTable('reporte_confirmaciones', {
   reporteHuellaUnique: unique('reporte_huella_unique').on(table.reporteId, table.huellaLocal),
 }));
 
+export const visitas = sqliteTable('visitas', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  ruta: text('ruta').notNull().default('/'),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Farmacia = typeof farmacias.$inferSelect;
 export type NewFarmacia = typeof farmacias.$inferInsert;
 export type Turno = typeof turnos.$inferSelect;
@@ -52,3 +58,5 @@ export type Reporte = typeof reportes.$inferSelect;
 export type NewReporte = typeof reportes.$inferInsert;
 export type ReporteConfirmacion = typeof reporteConfirmaciones.$inferSelect;
 export type NewReporteConfirmacion = typeof reporteConfirmaciones.$inferInsert;
+export type Visita = typeof visitas.$inferSelect;
+export type NewVisita = typeof visitas.$inferInsert;
