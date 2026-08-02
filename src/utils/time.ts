@@ -109,8 +109,8 @@ export function formatCaracasDate(date: Date): string {
  */
 export function formatCaracasFullDate(date: Date): string {
   const caracasDate = utcToCaracas(date);
-  const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   return `${dias[caracasDate.getUTCDay()]}, ${caracasDate.getUTCDate()} de ${meses[caracasDate.getUTCMonth()]} de ${caracasDate.getUTCFullYear()}`;
 }
 
