@@ -235,6 +235,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<bool
       reply_to_message_id: replyTo,
     });
 
+  const siteUrl = import.meta.env.SITE_URL || 'https://farmaguardia.example.com';
   const HELP = [
     '🤖 <b>FarmaGuardia Bot</b>',
     '',
@@ -245,7 +246,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<bool
     '• /farmacias — catálogo de farmacias activas',
     '• /ayuda — este mensaje',
     '',
-    '👥 Reporta datos incorrectos desde la web: farmaguardia.vercel.app',
+    `👥 Reporta datos incorrectos desde la web: ${siteUrl.replace(/\/$/, '')}`,
   ].join('\n');
 
   const nombre = message.from?.first_name ? `Hola, ${message.from.first_name}! 👋` : 'Hola! 👋';
