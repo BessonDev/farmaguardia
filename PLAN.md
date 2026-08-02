@@ -92,7 +92,10 @@ src/
 │   ├── index.astro                # Landing pública (SSR)
 │   ├── api/
 │   │   ├── turno.json.ts          # Endpoint JSON opcional
-│   │   └── reportes.ts            # POST reporte → DB + Telegram
+│   │   ├── reportes.ts            # POST reporte → DB + Telegram
+│   │   ├── reportes/confirmar.ts  # POST confirmación multi-usuario
+│   │   ├── visita.ts              # POST analytics de visitas
+│   │   └── telegram/webhook.ts    # Webhook bot consultable
 │   └── admin/
 │       ├── login.astro            # Formulario simple
 │       ├── index.astro            # Dashboard
@@ -108,7 +111,8 @@ src/
 │   └── reportes.ts                # Guardar reporte + Telegram
 └── utils/
     ├── time.ts                    # Utilidades UTC ↔ Caracas
-    └── telegram.ts                # Cliente bot Telegram
+    ├── telegram.ts                # Cliente bot Telegram + dispatcher comandos
+    └── fingerprint.ts             # Huella local + hash IP para reportes
 ```
 
 ---
@@ -152,11 +156,11 @@ src/
 - [x] Historial paginado con filtros (farmacia, rango fechas, 50/page).
 - [x] PWA básica: `manifest.json` + Service Worker offline con aviso "Datos de HH:MM".
 
-### Fase 3 — Comunidad
-- Bot de Telegram consultable (`/turno`, `/farmacias`).
-- Reportes con confirmación multi-usuario (varios reportan → mayor confianza).
-- Mapa OSM embebido en landing (tiles estáticos, sin JS pesado).
-- Analytics simples (visitas, reportes, horarios pico).
+### Fase 3 — Comunidad ✅
+- [x] Bot de Telegram consultable (`/turno`, `/farmacias`, webhook HTTPS + secret token).
+- [x] Reportes con confirmación multi-usuario (varios reportan → mayor confianza, dedupe por huella local + IP hash).
+- [x] Mapa OSM embebido en landing (iframe estático por card, sin JS pesado).
+- [x] Analytics simples (visitas, reportes, horarios pico).
 
 ### Fase 4 — Escala
 - Multi-ciudad (mismo schema, agregar `ciudad_id`).
@@ -167,8 +171,8 @@ src/
 ---
 
 ## 6. Fuera de Alcance del MVP
-- Mapa interactivo embebido
-- Bot de Telegram
+- Mapa interactivo con Leaflet en la landing (se usa iframe OSM estático por card)
+- Notificaciones push
 - Multi-ciudad
 
 ---
