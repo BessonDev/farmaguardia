@@ -228,6 +228,18 @@ export const server = {
 
         if (existente.length > 0) {
           if (input.sobreescribir) {
+            // Preservar coordenadas existentes si el CSV viene vacío
+            if (!datos.latitud || !datos.longitud) {
+              const actual = await db
+                .select({ latitud: farmacias.latitud, longitud: farmacias.longitud })
+                .from(farmacias)
+                .where(eq(farmacias.id, existente[0].id))
+                .limit(1);
+              if (actual.length > 0) {
+                if (!datos.latitud) datos.latitud = actual[0].latitud;
+                if (!datos.longitud) datos.longitud = actual[0].longitud;
+              }
+            }
             await db.update(farmacias).set(datos).where(eq(farmacias.id, existente[0].id));
             resultados.actualizadas++;
           } else {
