@@ -1,4 +1,4 @@
-import { defineAction } from 'astro:actions';
+import { defineAction, ActionError } from 'astro:actions';
 import { z } from 'astro/zod';
 import { timingSafeEqual as nodeTimingSafeEqual, randomBytes } from 'node:crypto';
 import { db } from '../db';
@@ -31,7 +31,9 @@ function createSessionToken(): string {
 }
 
 export function getAdminPassword(): string | undefined {
-  return import.meta.env.ADMIN_PASSWORD;
+  // Prioriza process.env (runtime) porque Astro hornea import.meta.env en build time.
+  // En Dokploy el .env no está versionado, así que el valor real llega por runtime.
+  return process.env.ADMIN_PASSWORD ?? (import.meta as { env?: Record<string, string | undefined> }).env?.ADMIN_PASSWORD;
 }
 
 export function verifySession(cookies: {
@@ -81,10 +83,10 @@ export const server = {
     handler: async (input, { cookies }) => {
       const envPassword = getAdminPassword();
       if (!envPassword) {
-        return { error: 'ADMIN_PASSWORD no configurado en el servidor' };
+        throw new ActionError({ code: 'INTERNAL_SERVER_ERROR', message: 'ADMIN_PASSWORD no configurado en el servidor' });
       }
       if (!timingSafeEqual(input.password, envPassword)) {
-        return { error: 'Contraseña incorrecta' };
+        throw new ActionError({ code: 'UNAUTHORIZED', message: 'Contraseña incorrecta' });
       }
       setSessionCookie(cookies);
       return { ok: true };
@@ -183,7 +185,7 @@ export const server = {
       const filas = parseCsvClean(texto);
 
       if (filas.length < 2) {
-        return { error: 'El archivo no tiene datos. Usa la plantilla descargable.' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'El archivo no tiene datos. Usa la plantilla descargable.' });
       }
 
       const header = filas[0].map(c => c.toLowerCase());
@@ -200,7 +202,7 @@ export const server = {
       };
 
       if (col.nombre === -1 || col.direccion === -1) {
-        return { error: 'El CSV debe tener al menos las columnas "nombre" y "direccion".' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'El CSV debe tener al menos las columnas "nombre" y "direccion".' });
       }
 
       const filaFarmacias = filas.slice(1);
@@ -271,7 +273,7 @@ export const server = {
       const fin = parseCaracasDateTimeLocal(input.fin);
 
       if (inicio >= fin) {
-        return { error: 'La fecha de inicio debe ser anterior a la fecha de fin' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha de inicio debe ser anterior a la fecha de fin' });
       }
 
       // Validación de solapamiento (solo para la misma farmacia)
@@ -286,7 +288,7 @@ export const server = {
         .limit(1);
 
       if (overlap.length > 0) {
-        return { error: 'Solapamiento: ya existe un turno en ese rango de fechas' };
+        throw new ActionError({ code: 'CONFLICT', message: 'Solapamiento: ya existe un turno en ese rango de fechas' });
       }
 
       await db.insert(turnos).values({
@@ -313,7 +315,7 @@ export const server = {
       const fin = parseCaracasDateTimeLocal(input.fin);
 
       if (inicio >= fin) {
-        return { error: 'La fecha de inicio debe ser anterior a la fecha de fin' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha de inicio debe ser anterior a la fecha de fin' });
       }
 
       // Solapamiento excluyendo el propio turno (solo para la misma farmacia)
@@ -329,7 +331,7 @@ export const server = {
         .limit(1);
 
       if (overlap.length > 0) {
-        return { error: 'Solapamiento: ya existe un turno en ese rango de fechas' };
+        throw new ActionError({ code: 'CONFLICT', message: 'Solapamiento: ya existe un turno en ese rango de fechas' });
       }
 
       await db.update(turnos).set({
@@ -372,7 +374,7 @@ export const server = {
       const duracionMs = input.duracionHoras * 60 * 60 * 1000;
 
       if (inicioBase >= finLimite) {
-        return { error: 'La fecha de fin debe ser posterior a la fecha de inicio' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha de fin debe ser posterior a la fecha de inicio' });
       }
 
       const generados: { farmaciaId: number; inicio: string; fin: string }[] = [];
@@ -474,11 +476,11 @@ export const server = {
         .limit(1);
 
       if (activo.length === 0) {
-        return { error: 'No hay un turno activo en este momento para sustituir' };
+        throw new ActionError({ code: 'NOT_FOUND', message: 'No hay un turno activo en este momento para sustituir' });
       }
 
       if (activo[0].farmaciaId === input.farmaciaId) {
-        return { error: 'La farmacia de respaldo no puede ser la misma que está de turno' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'La farmacia de respaldo no puede ser la misma que está de turno' });
       }
 
       const turnoActivo = activo[0];
@@ -568,14 +570,14 @@ export const server = {
         try {
           filas = await readSheet(buffer);
         } catch {
-          return { error: 'No se pudo leer el archivo .xlsx. Verifica que sea un Excel válido.' };
+          throw new ActionError({ code: 'BAD_REQUEST', message: 'No se pudo leer el archivo .xlsx. Verifica que sea un Excel válido.' });
         }
       } else {
         filas = parseCsvClean(buffer.toString('utf-8'));
       }
 
       if (filas.length < 2) {
-        return { error: 'El archivo no tiene datos. Usa la plantilla descargable.' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'El archivo no tiene datos. Usa la plantilla descargable.' });
       }
 
       const header = filas[0].map(c => String(c).toLowerCase().trim());
@@ -588,7 +590,7 @@ export const server = {
       };
 
       if (col.farmacia === -1 || col.fecha === -1 || col.inicio === -1 || col.fin === -1) {
-        return { error: 'El archivo debe tener al menos las columnas "farmacia", "fecha", "hora_inicio" y "hora_fin".' };
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'El archivo debe tener al menos las columnas "farmacia", "fecha", "hora_inicio" y "hora_fin".' });
       }
 
       // Mapa de farmacias por nombre para resolución
@@ -728,17 +730,18 @@ export const server = {
     accept: 'form',
     handler: async () => {
       if (!isTelegramConfigured()) {
-        return { error: 'Telegram no está configurado: faltan TELEGRAM_BOT_TOKEN y/o TELEGRAM_CHAT_ID en .env' };
+        throw new ActionError({ code: 'INTERNAL_SERVER_ERROR', message: 'Telegram no está configurado: faltan TELEGRAM_BOT_TOKEN y/o TELEGRAM_CHAT_ID en .env' });
       }
       try {
         const res = await testTelegramConnection();
         if (res.ok) {
           return { ok: true };
         }
-        return { error: `El bot respondió con error: ${res.description || 'desconocido'}` };
+        throw new ActionError({ code: 'INTERNAL_SERVER_ERROR', message: `El bot respondió con error: ${res.description || 'desconocido'}` });
       } catch (e) {
+        if (e instanceof ActionError) throw e;
         console.error('Error en test de Telegram:', e);
-        return { error: `Error enviando mensaje: ${String(e)}` };
+        throw new ActionError({ code: 'INTERNAL_SERVER_ERROR', message: `Error enviando mensaje: ${String(e)}` });
       }
     },
   }),
