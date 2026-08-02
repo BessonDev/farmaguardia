@@ -6,6 +6,7 @@ import { farmacias, turnos } from '../db/schema';
 import { eq, and, gte, lt, lte, sql } from 'drizzle-orm';
 import { parseCaracasDateTimeLocal, toUtcISO, nowUtc } from '../utils/time';
 import { sendReportToTelegram } from '../utils/telegram';
+import { parseCsvClean } from '../utils/csv';
 
 /**
  * Autenticación simple con ADMIN_PASSWORD en env.
@@ -166,6 +167,79 @@ export const server = {
     handler: async (input) => {
       await db.delete(farmacias).where(eq(farmacias.id, input.id));
       return { ok: true };
+    },
+  }),
+
+  importarFarmacias: defineAction({
+    accept: 'form',
+    input: z.object({
+      archivo: z.instanceof(File),
+      sobreescribir: z.string().optional(),
+    }),
+    handler: async (input) => {
+      const texto = await input.archivo.text();
+      const filas = parseCsvClean(texto);
+
+      if (filas.length < 2) {
+        return { error: 'El archivo no tiene datos. Usa la plantilla descargable.' };
+      }
+
+      const header = filas[0].map(c => c.toLowerCase());
+      const col = {
+        nombre: header.indexOf('nombre'),
+        direccion: header.indexOf('direccion'),
+        sector: header.indexOf('sector'),
+        telefono: header.indexOf('telefono'),
+        whatsapp: header.indexOf('whatsapp'),
+        latitud: header.indexOf('latitud'),
+        longitud: header.indexOf('longitud'),
+        delivery: header.indexOf('delivery'),
+        activa: header.indexOf('activa'),
+      };
+
+      if (col.nombre === -1 || col.direccion === -1) {
+        return { error: 'El CSV debe tener al menos las columnas "nombre" y "direccion".' };
+      }
+
+      const filaFarmacias = filas.slice(1);
+      const resultados = { creadas: 0, actualizadas: 0, errores: [] as string[] };
+
+      for (let i = 0; i < filaFarmacias.length; i++) {
+        const f = filaFarmacias[i];
+        const nombre = f[col.nombre];
+        if (!nombre) {
+          resultados.errores.push(`Fila ${i + 2}: nombre vacío`);
+          continue;
+        }
+
+        const datos = {
+          nombre,
+          direccion: f[col.direccion] ?? '',
+          sector: col.sector >= 0 && f[col.sector] ? f[col.sector] : 'Centro',
+          telefono: col.telefono >= 0 && f[col.telefono] ? f[col.telefono] : null,
+          whatsapp: col.whatsapp >= 0 && f[col.whatsapp] ? f[col.whatsapp] : null,
+          latitud: col.latitud >= 0 && f[col.latitud] ? Number(f[col.latitud]) : null,
+          longitud: col.longitud >= 0 && f[col.longitud] ? Number(f[col.longitud]) : null,
+          delivery: col.delivery >= 0 ? ['si', 'sí', '1', 'true'].includes(f[col.delivery].toLowerCase()) : false,
+          activa: col.activa >= 0 ? !['no', '0', 'false'].includes(f[col.activa].toLowerCase()) : true,
+        };
+
+        const existente = await db.select({ id: farmacias.id }).from(farmacias).where(eq(farmacias.nombre, nombre)).limit(1);
+
+        if (existente.length > 0) {
+          if (input.sobreescribir) {
+            await db.update(farmacias).set(datos).where(eq(farmacias.id, existente[0].id));
+            resultados.actualizadas++;
+          } else {
+            resultados.errores.push(`Fila ${i + 2}: "${nombre}" ya existe (usa "sobreescribir" para actualizarla)`);
+          }
+        } else {
+          await db.insert(farmacias).values(datos);
+          resultados.creadas++;
+        }
+      }
+
+      return { ok: true, ...resultados };
     },
   }),
 
