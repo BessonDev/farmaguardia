@@ -2,7 +2,7 @@
 import { actions } from 'astro:actions';
 
 interface Props {
-  active: 'dashboard' | 'farmacias' | 'turnos' | 'historial' | 'importar';
+  active: 'dashboard' | 'farmacias' | 'turnos' | 'historial' | 'importar' | 'rotacion';
 }
 
 const { active } = Astro.props;
@@ -13,6 +13,7 @@ const items = [
   { key: 'turnos', href: '/admin/turnos', label: 'Turnos', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
   { key: 'historial', href: '/admin/historial', label: 'Historial', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { key: 'importar', href: '/admin/importar', label: 'Importar', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4' },
+  { key: 'rotacion', href: '/admin/rotacion', label: 'Rotación', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' },
 ] as const;
 ---
 

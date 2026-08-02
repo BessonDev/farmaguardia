@@ -1,0 +1,103 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdminSidebar from '../../components/AdminSidebar.astro';
+import { actions } from 'astro:actions';
+import { db } from '../../db';
+import { farmacias } from '../../db/schema';
+import { eq, asc } from 'drizzle-orm';
+import { nowCaracas } from '../../utils/time';
+
+const result = Astro.getActionResult(actions.generarRotacion);
+const activas = await db.select().from(farmacias).where(eq(farmacias.activa, 1)).orderBy(asc(farmacias.nombre));
+
+const hoy = nowCaracas();
+const hoyStr = `${hoy.getUTCFullYear()}-${String(hoy.getUTCMonth() + 1).padStart(2, '0')}-${String(hoy.getUTCDate()).padStart(2, '0')}`;
+const en7dias = new Date(hoy);
+en7dias.setUTCDate(en7dias.getUTCDate() + 7);
+const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() + 1).padStart(2, '0')}-${String(en7dias.getUTCDate()).padStart(2, '0')}`;
+---
+
+<Layout title="Rotación de Turnos - FarmaGuardia Admin">
+  <div class="min-h-full flex">
+    <AdminSidebar active="rotacion" />
+
+    <div class="flex-1 flex flex-col min-w-0">
+      <div class="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+        <span class="font-bold text-gray-900 dark:text-gray-100">Rotación</span>
+        <div class="flex gap-2">
+          <a href="/admin" class="text-sm text-primary">Dashboard</a>
+          <a href="/admin/turnos" class="text-sm text-primary">Turnos</a>
+        </div>
+      </div>
+
+      <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Generar Rotación de Turnos</h1>
+
+        {result?.error && (
+          <div class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+            {result.error.message}
+          </div>
+        )}
+
+        {result?.data?.ok && (
+          <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">
+            Rotación generada: <strong>{result.data.generados}</strong> turnos creados
+            {result.data.omitidos > 0 && `, ${result.data.omitidos} omitidos por solapamiento.`}
+          </div>
+        )}
+
+        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Configurar rotación</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Genera turnos consecutivos en cadena: la primera farmacia seleccionada inicia el rango y las demás rotan en orden, cada una durante la duración configurada. Los turnos que solapen con uno existente se omiten.
+          </p>
+
+          <form method="POST" action={actions.generarRotacion} class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="fechaInicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de inicio *</label>
+              <input type="date" id="fechaInicio" name="fechaInicio" required value={hoyStr} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+            </div>
+            <div>
+              <label for="fechaFin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de fin *</label>
+              <input type="date" id="fechaFin" name="fechaFin" required value={en7diasStr} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+            </div>
+            <div>
+              <label for="horaInicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora de inicio *</label>
+              <input type="time" id="horaInicio" name="horaInicio" required value="08:00" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Hora de Caracas</p>
+            </div>
+            <div>
+              <label for="duracionHoras" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duración por turno (horas) *</label>
+              <input type="number" id="duracionHoras" name="duracionHoras" required min="1" max="168" value="24" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Turno estándar: 24h (de 08:00 a 08:00)</p>
+            </div>
+            <div class="sm:col-span-2">
+              <label for="notas" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
+              <input type="text" id="notas" name="notas" placeholder="Ej: Rotación semanal de turnos" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+            </div>
+            <div class="sm:col-span-2">
+              <span class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Farmacias en rotación (orden de selección) *</span>
+              {activas.length > 0 ? (
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {activas.map((f, i) => (
+                    <label class="flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                      <input type="checkbox" name="farmacias" value={f.id} checked={i === 0} class="rounded border-gray-300 text-primary focus:ring-primary" />
+                      <span class="truncate">{f.nombre}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p class="text-sm text-amber-600 dark:text-amber-400">No hay farmacias activas. Activa alguna en <a href="/admin/farmacias" class="underline">Farmacias</a>.</p>
+              )}
+            </div>
+            <div class="sm:col-span-2 flex gap-3 pt-2">
+              <button type="submit" disabled={activas.length === 0} class="px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors">
+                Generar turnos
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+</Layout>

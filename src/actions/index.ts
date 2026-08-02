@@ -3,8 +3,8 @@ import { z } from 'astro/zod';
 import { timingSafeEqual as nodeTimingSafeEqual, randomBytes } from 'node:crypto';
 import { db } from '../db';
 import { farmacias, turnos } from '../db/schema';
-import { eq, and, gte, lt, lte, sql } from 'drizzle-orm';
-import { parseCaracasDateTimeLocal, toUtcISO, nowUtc } from '../utils/time';
+import { eq, and, gt, gte, lt, lte, sql } from 'drizzle-orm';
+import { parseCaracasDateTimeLocal, toUtcISO, nowUtc, createUtcFromCaracas } from '../utils/time';
 import { sendReportToTelegram } from '../utils/telegram';
 import { parseCsvClean } from '../utils/csv';
 
@@ -264,7 +264,7 @@ export const server = {
       const overlap = await db
         .select({ id: turnos.id })
         .from(turnos)
-        .where(and(lt(turnos.inicio, fin), gte(turnos.fin, inicio)))
+        .where(and(lt(turnos.inicio, fin), gt(turnos.fin, inicio)))
         .limit(1);
 
       if (overlap.length > 0) {
@@ -304,7 +304,7 @@ export const server = {
         .from(turnos)
         .where(and(
           lt(turnos.inicio, fin),
-          gte(turnos.fin, inicio),
+          gt(turnos.fin, inicio),
           sql`id != ${input.id}`
         ))
         .limit(1);
@@ -332,6 +332,67 @@ export const server = {
     },
   }),
 
+  generarRotacion: defineAction({
+    accept: 'form',
+    input: z.object({
+      fechaInicio: z.string(),
+      fechaFin: z.string(),
+      horaInicio: z.string(),
+      duracionHoras: z.coerce.number().min(1).max(168),
+      farmacias: z.array(z.coerce.number()).min(1),
+      notas: z.string().optional().default(''),
+    }),
+    handler: async (input) => {
+      const [fY, fM, fD] = input.fechaInicio.split('-').map(Number);
+      const [hH, hM] = input.horaInicio.split(':').map(Number);
+      const [tY, tM, tD] = input.fechaFin.split('-').map(Number);
+
+      let inicio = createUtcFromCaracas(fY, fM, fD, hH, hM);
+      const finLimite = createUtcFromCaracas(tY, tM, tD, 23, 59);
+      const duracionMs = input.duracionHoras * 60 * 60 * 1000;
+
+      if (inicio >= finLimite) {
+        return { error: 'La fecha de fin debe ser posterior a la fecha de inicio' };
+      }
+
+      const generados: { farmaciaId: number; inicio: string; fin: string }[] = [];
+      const omitidos: { inicio: string; razon: string }[] = [];
+      let idx = 0;
+      let guard = 0;
+
+      while (inicio < finLimite && guard < 2000) {
+        const farmaciaId = input.farmacias[idx % input.farmacias.length];
+        const fin = new Date(inicio.getTime() + duracionMs);
+        const inicioISO = toUtcISO(inicio);
+        const finISO = toUtcISO(fin);
+
+        const overlap = await db
+          .select({ id: turnos.id })
+          .from(turnos)
+          .where(and(lt(turnos.inicio, finISO), gt(turnos.fin, inicioISO)))
+          .limit(1);
+
+        if (overlap.length > 0) {
+          omitidos.push({ inicio: inicioISO, razon: 'Solapa con un turno existente' });
+        } else {
+          await db.insert(turnos).values({
+            farmaciaId,
+            inicio: inicioISO,
+            fin: finISO,
+            notas: input.notas || null,
+          });
+          generados.push({ farmaciaId, inicio: inicioISO, fin: finISO });
+        }
+
+        inicio = fin;
+        idx++;
+        guard++;
+      }
+
+      return { ok: true, generados: generados.length, omitidos: omitidos.length };
+    },
+  }),
+
   // ─── Override de emergencia ───
   overrideTurnoHoy: defineAction({
     accept: 'form',
@@ -346,7 +407,7 @@ export const server = {
       const activo = await db
         .select({ id: turnos.id, inicio: turnos.inicio, fin: turnos.fin })
         .from(turnos)
-        .where(and(lte(turnos.inicio, ahoraISO), gte(turnos.fin, ahoraISO)))
+        .where(and(lte(turnos.inicio, ahoraISO), gt(turnos.fin, ahoraISO)))
         .limit(1);
 
       if (activo.length === 0) {
