@@ -146,11 +146,11 @@ src/
 
 ## 5. Fases Siguientes
 
-### Fase 2 — Carga Rápida
-- Importar CSV/Excel con preview y plantilla descargable.
-- Plantillas de rotación (slots configurables → generación masiva).
-- Historial paginado con filtros (farmacia, rango fechas, 50/page).
-- PWA básica: `manifest.json` + Service Worker offline con aviso "Datos de HH:MM".
+### Fase 2 — Carga Rápida ✅
+- [x] Importar CSV/Excel con preview y plantilla descargable.
+- [x] Plantillas de rotación (slots configurables → generación masiva).
+- [x] Historial paginado con filtros (farmacia, rango fechas, 50/page).
+- [x] PWA básica: `manifest.json` + Service Worker offline con aviso "Datos de HH:MM".
 
 ### Fase 3 — Comunidad
 - Bot de Telegram consultable (`/turno`, `/farmacias`).
@@ -167,11 +167,6 @@ src/
 ---
 
 ## 6. Fuera de Alcance del MVP
-- Importación Excel/CSV
-- Historial paginado
-- PWA completa
-- Plantillas de rotación
-- Cambio de contraseña en panel
 - Mapa interactivo embebido
 - Bot de Telegram
 - Multi-ciudad
