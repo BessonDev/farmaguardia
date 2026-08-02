@@ -19,7 +19,7 @@ const turnoActual = (await db
   })
   .from(turnos)
   .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
-  .where(and(lte(turnos.inicio, ahoraISO), gte(turnos.fin, ahoraISO)))
+  .where(and(lte(turnos.inicio, ahoraISO), gt(turnos.fin, ahoraISO)))
   .limit(1))[0] || null;
 
 // Próximos turnos (7 días)

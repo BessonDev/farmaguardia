@@ -4,7 +4,7 @@ import AdminSidebar from '../../components/AdminSidebar.astro';
 import { actions } from 'astro:actions';
 import { db } from '../../db';
 import { farmacias, turnos } from '../../db/schema';
-import { eq, and, gte, lte, asc, desc } from 'drizzle-orm';
+import { eq, and, gt, lte, asc, desc } from 'drizzle-orm';
 import { toUtcISO, nowUtc, toCaracasDateTimeLocal, formatCaracasDateTime } from '../../utils/time';
 
 const result = Astro.getActionResult(actions.crearTurno) ?? Astro.getActionResult(actions.editarTurno) ?? Astro.getActionResult(actions.eliminarTurno) ?? Astro.getActionResult(actions.overrideTurnoHoy);
@@ -25,7 +25,7 @@ const turnoActivo = (await db
   })
   .from(turnos)
   .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
-  .where(and(lte(turnos.inicio, ahoraISO), gte(turnos.fin, ahoraISO)))
+  .where(and(lte(turnos.inicio, ahoraISO), gt(turnos.fin, ahoraISO)))
   .limit(1))[0] || null;
 
 // Turnos próximos 30 días

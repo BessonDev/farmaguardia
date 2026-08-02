@@ -5,7 +5,7 @@ import CardTurnoActual from '../components/CardTurnoActual.astro';
 import ListaProximosTurnos from '../components/ListaProximosTurnos.astro';
 import { db } from '../db';
 import { farmacias, turnos } from '../db/schema';
-import { eq, and, lte, gte, sql } from 'drizzle-orm';
+import { eq, and, lte, gt, sql } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime } from '../utils/time';
 
 export const prerender = false;
@@ -38,7 +38,7 @@ const turnoActualResult = await db
   .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
   .where(and(
     lte(turnos.inicio, ahoraISO),
-    gte(turnos.fin, ahoraISO),
+    gt(turnos.fin, ahoraISO),
     eq(farmacias.activa, 1)
   ))
   .orderBy(turnos.inicio)

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { db } from '../../db';
 import { farmacias, turnos } from '../../db/schema';
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { eq, and, gt, lte } from 'drizzle-orm';
 import { toUtcISO, nowUtc } from '../../utils/time';
 
 export const GET: APIRoute = async () => {
@@ -28,7 +28,7 @@ export const GET: APIRoute = async () => {
     .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
     .where(and(
       lte(turnos.inicio, ahoraISO),
-      gte(turnos.fin, ahoraISO),
+      gt(turnos.fin, ahoraISO),
       eq(farmacias.activa, 1)
     ))
     .limit(1);
