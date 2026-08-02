@@ -4,7 +4,7 @@ import AdminSidebar from '../../components/AdminSidebar.astro';
 import { actions } from 'astro:actions';
 import { db } from '../../db';
 import { farmacias, turnos } from '../../db/schema';
-import { eq, and, gt, lte, asc, desc } from 'drizzle-orm';
+import { eq, and, gt, gte, lte, asc, desc } from 'drizzle-orm';
 import { toUtcISO, nowUtc, toCaracasDateTimeLocal, formatCaracasDateTime } from '../../utils/time';
 
 const result = Astro.getActionResult(actions.crearTurno) ?? Astro.getActionResult(actions.editarTurno) ?? Astro.getActionResult(actions.eliminarTurno) ?? Astro.getActionResult(actions.overrideTurnoHoy);
@@ -14,8 +14,8 @@ const todasFarmacias = await db.select().from(farmacias).orderBy(asc(farmacias.n
 
 const ahoraISO = toUtcISO(nowUtc());
 
-// Turno activo ahora (para override)
-const turnoActivo = (await db
+// Turnos activos ahora (para override)
+const turnosActivos = await db
   .select({
     id: turnos.id,
     inicio: turnos.inicio,
@@ -26,7 +26,7 @@ const turnoActivo = (await db
   .from(turnos)
   .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
   .where(and(lte(turnos.inicio, ahoraISO), gt(turnos.fin, ahoraISO)))
-  .limit(1))[0] || null;
+  .orderBy(turnos.inicio);
 
 // Turnos próximos 30 días
 const dentroDe30Dias = new Date();
@@ -88,28 +88,35 @@ const editando = editId ? listaTurnos.find(t => t.id === Number(editId)) : null;
             </svg>
             Cambiar turno de hoy (Override de emergencia)
           </h2>
-          {turnoActivo ? (
-            <form method="POST" action={actions.overrideTurnoHoy} class="flex flex-col sm:flex-row sm:items-end gap-3">
-              <div class="flex-1">
+          {turnosActivos.length > 0 ? (
+            <form method="POST" action={actions.overrideTurnoHoy} class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="turnoOverride" class="block text-sm font-medium text-red-800 dark:text-red-300 mb-1">Turno a sustituir</label>
+                <select id="turnoOverride" name="turnoId" required class="w-full px-3 py-2 border border-red-300 dark:border-red-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  {turnosActivos.map(t => (
+                    <option value={t.id}>
+                      {t.nombre} · hasta {formatCaracasDateTime(new Date(t.fin))}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label for="farmaciaOverride" class="block text-sm font-medium text-red-800 dark:text-red-300 mb-1">Farmacia de respaldo</label>
                 <select id="farmaciaOverride" name="farmaciaId" required class="w-full px-3 py-2 border border-red-300 dark:border-red-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                   <option value="">Seleccionar...</option>
-                  {todasFarmacias.filter(f => f.id !== turnoActivo.farmaciaId).map(f => (
+                  {todasFarmacias.filter(f => !turnosActivos.some(t => t.farmaciaId === f.id)).map(f => (
                     <option value={f.id}>{f.nombre}</option>
                   ))}
                 </select>
               </div>
-              <div class="text-sm text-red-700 dark:text-red-400 pb-2 sm:pb-0 sm:mr-2">
-                Turno actual: <strong>{turnoActivo.nombre}</strong>
-                <br class="hidden sm:block" />
-                <span class="text-xs">hasta {formatCaracasDateTime(new Date(turnoActivo.fin))}</span>
+              <div class="sm:col-span-2">
+                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+                  Sustituir turno
+                </button>
               </div>
-              <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-                Sustituir turno
-              </button>
             </form>
           ) : (
-            <p class="text-sm text-red-700 dark:text-red-400">No hay turno activo en este momento.</p>
+            <p class="text-sm text-red-700 dark:text-red-400">No hay turnos activos en este momento.</p>
           )}
         </div>
 

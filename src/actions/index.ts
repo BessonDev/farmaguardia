@@ -260,11 +260,15 @@ export const server = {
         return { error: 'La fecha de inicio debe ser anterior a la fecha de fin' };
       }
 
-      // Validación de solapamiento (ningún otro turno activo en el rango)
+      // Validación de solapamiento (solo para la misma farmacia)
       const overlap = await db
         .select({ id: turnos.id })
         .from(turnos)
-        .where(and(lt(turnos.inicio, fin), gt(turnos.fin, inicio)))
+        .where(and(
+          lt(turnos.inicio, fin),
+          gt(turnos.fin, inicio),
+          eq(turnos.farmaciaId, input.farmaciaId)
+        ))
         .limit(1);
 
       if (overlap.length > 0) {
@@ -298,13 +302,14 @@ export const server = {
         return { error: 'La fecha de inicio debe ser anterior a la fecha de fin' };
       }
 
-      // Solapamiento excluyendo el propio turno
+      // Solapamiento excluyendo el propio turno (solo para la misma farmacia)
       const overlap = await db
         .select({ id: turnos.id })
         .from(turnos)
         .where(and(
           lt(turnos.inicio, fin),
           gt(turnos.fin, inicio),
+          eq(turnos.farmaciaId, input.farmaciaId),
           sql`id != ${input.id}`
         ))
         .limit(1);
@@ -341,52 +346,91 @@ export const server = {
       duracionHoras: z.coerce.number().min(1).max(168),
       farmacias: z.array(z.coerce.number()).min(1),
       notas: z.string().optional().default(''),
+      modo: z.enum(['simultaneo', 'secuencial']).default('secuencial'),
     }),
     handler: async (input) => {
       const [fY, fM, fD] = input.fechaInicio.split('-').map(Number);
       const [hH, hM] = input.horaInicio.split(':').map(Number);
       const [tY, tM, tD] = input.fechaFin.split('-').map(Number);
 
-      let inicio = createUtcFromCaracas(fY, fM, fD, hH, hM);
+      const inicioBase = createUtcFromCaracas(fY, fM, fD, hH, hM);
       const finLimite = createUtcFromCaracas(tY, tM, tD, 23, 59);
       const duracionMs = input.duracionHoras * 60 * 60 * 1000;
 
-      if (inicio >= finLimite) {
+      if (inicioBase >= finLimite) {
         return { error: 'La fecha de fin debe ser posterior a la fecha de inicio' };
       }
 
       const generados: { farmaciaId: number; inicio: string; fin: string }[] = [];
       const omitidos: { inicio: string; razon: string }[] = [];
-      let idx = 0;
-      let guard = 0;
 
-      while (inicio < finLimite && guard < 2000) {
-        const farmaciaId = input.farmacias[idx % input.farmacias.length];
-        const fin = new Date(inicio.getTime() + duracionMs);
-        const inicioISO = toUtcISO(inicio);
-        const finISO = toUtcISO(fin);
+      if (input.modo === 'simultaneo') {
+        // Modo simultáneo: todas las farmacias cubren el mismo rango completo
+        for (const farmaciaId of input.farmacias) {
+          const inicioISO = toUtcISO(inicioBase);
+          const finISO = toUtcISO(finLimite);
 
-        const overlap = await db
-          .select({ id: turnos.id })
-          .from(turnos)
-          .where(and(lt(turnos.inicio, finISO), gt(turnos.fin, inicioISO)))
-          .limit(1);
+          // Verificar solapamiento solo para esta farmacia
+          const overlap = await db
+            .select({ id: turnos.id })
+            .from(turnos)
+            .where(and(
+              lt(turnos.inicio, finISO),
+              gt(turnos.fin, inicioISO),
+              eq(turnos.farmaciaId, farmaciaId)
+            ))
+            .limit(1);
 
-        if (overlap.length > 0) {
-          omitidos.push({ inicio: inicioISO, razon: 'Solapa con un turno existente' });
-        } else {
-          await db.insert(turnos).values({
-            farmaciaId,
-            inicio: inicioISO,
-            fin: finISO,
-            notas: input.notas || null,
-          });
-          generados.push({ farmaciaId, inicio: inicioISO, fin: finISO });
+          if (overlap.length > 0) {
+            omitidos.push({ inicio: inicioISO, razon: 'Solapa con un turno existente' });
+          } else {
+            await db.insert(turnos).values({
+              farmaciaId,
+              inicio: inicioISO,
+              fin: finISO,
+              notas: input.notas || null,
+            });
+            generados.push({ farmaciaId, inicio: inicioISO, fin: finISO });
+          }
         }
+      } else {
+        // Modo secuencial: cadena rotativa (comportamiento original)
+        let inicio = inicioBase;
+        let idx = 0;
+        let guard = 0;
 
-        inicio = fin;
-        idx++;
-        guard++;
+        while (inicio < finLimite && guard < 2000) {
+          const farmaciaId = input.farmacias[idx % input.farmacias.length];
+          const fin = new Date(inicio.getTime() + duracionMs);
+          const inicioISO = toUtcISO(inicio);
+          const finISO = toUtcISO(fin);
+
+          const overlap = await db
+            .select({ id: turnos.id })
+            .from(turnos)
+            .where(and(
+              lt(turnos.inicio, finISO),
+              gt(turnos.fin, inicioISO),
+              eq(turnos.farmaciaId, farmaciaId)
+            ))
+            .limit(1);
+
+          if (overlap.length > 0) {
+            omitidos.push({ inicio: inicioISO, razon: 'Solapa con un turno existente' });
+          } else {
+            await db.insert(turnos).values({
+              farmaciaId,
+              inicio: inicioISO,
+              fin: finISO,
+              notas: input.notas || null,
+            });
+            generados.push({ farmaciaId, inicio: inicioISO, fin: finISO });
+          }
+
+          inicio = fin;
+          idx++;
+          guard++;
+        }
       }
 
       return { ok: true, generados: generados.length, omitidos: omitidos.length };
@@ -397,21 +441,30 @@ export const server = {
   overrideTurnoHoy: defineAction({
     accept: 'form',
     input: z.object({
+      turnoId: z.coerce.number(),
       farmaciaId: z.coerce.number(),
     }),
     handler: async (input, { cookies }) => {
       const ahora = nowUtc();
       const ahoraISO = toUtcISO(ahora);
 
-      // Encontrar el turno activo actual
+      // Encontrar el turno activo a sustituir (debe estar vigente ahora)
       const activo = await db
-        .select({ id: turnos.id, inicio: turnos.inicio, fin: turnos.fin })
+        .select({ id: turnos.id, inicio: turnos.inicio, fin: turnos.fin, farmaciaId: turnos.farmaciaId })
         .from(turnos)
-        .where(and(lte(turnos.inicio, ahoraISO), gt(turnos.fin, ahoraISO)))
+        .where(and(
+          eq(turnos.id, input.turnoId),
+          lte(turnos.inicio, ahoraISO),
+          gt(turnos.fin, ahoraISO)
+        ))
         .limit(1);
 
       if (activo.length === 0) {
         return { error: 'No hay un turno activo en este momento para sustituir' };
+      }
+
+      if (activo[0].farmaciaId === input.farmaciaId) {
+        return { error: 'La farmacia de respaldo no puede ser la misma que está de turno' };
       }
 
       const turnoActivo = activo[0];

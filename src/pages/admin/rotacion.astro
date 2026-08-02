@@ -49,7 +49,7 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Configurar rotación</h2>
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            Genera turnos consecutivos en cadena: la primera farmacia seleccionada inicia el rango y las demás rotan en orden, cada una durante la duración configurada. Los turnos que solapen con uno existente se omiten.
+            Genera turnos para las farmacias seleccionadas. Elige el modo:
           </p>
 
           <form method="POST" action={actions.generarRotacion} class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -69,7 +69,21 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
             <div>
               <label for="duracionHoras" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duración por turno (horas) *</label>
               <input type="number" id="duracionHoras" name="duracionHoras" required min="1" max="168" value="24" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Turno estándar: 24h (de 08:00 a 08:00)</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="duracion-help">Turno estándar: 24h (de 08:00 a 08:00)</p>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modo de rotación *</label>
+              <div class="flex flex-col sm:flex-row gap-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="modo" value="simultaneo" class="rounded border-gray-300 text-primary focus:ring-primary" />
+                  <span>Simultáneo: todas las farmacias cubren el mismo rango completo</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="modo" value="secuencial" checked class="rounded border-gray-300 text-primary focus:ring-primary" />
+                  <span>Secuencial: rotan una por período</span>
+                </label>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="modo-help">En modo simultáneo, la duración define la hora de fin del rango completo.</p>
             </div>
             <div class="sm:col-span-2">
               <label for="notas" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
@@ -100,4 +114,25 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
       </main>
     </div>
   </div>
+
+  <script>
+    const modoInputs = document.querySelectorAll('input[name="modo"]');
+    const duracionHelp = document.getElementById('duracion-help');
+    const modoHelp = document.getElementById('modo-help');
+    const duracionField = document.getElementById('duracionHoras');
+
+    function updateModoHelp() {
+      const simultaneo = document.querySelector('input[name="modo"]:checked')?.value === 'simultaneo';
+      if (duracionHelp) duracionHelp.textContent = simultaneo
+        ? 'Se ignora: el rango completo lo define la fecha de fin'
+        : 'Turno estándar: 24h (de 08:00 a 08:00)';
+      if (modoHelp) modoHelp.textContent = simultaneo
+        ? 'Cada farmacia seleccionada recibe un turno que cubre TODO el rango (fecha inicio → fecha fin).'
+        : 'Las farmacias rotan en cadena: una por período, la siguiente inicia cuando termina la anterior.';
+      if (duracionField) duracionField.disabled = simultaneo;
+    }
+
+    modoInputs.forEach(input => input.addEventListener('change', updateModoHelp));
+    updateModoHelp();
+  </script>
 </Layout>

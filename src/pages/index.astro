@@ -5,7 +5,7 @@ import CardTurnoActual from '../components/CardTurnoActual.astro';
 import ListaProximosTurnos from '../components/ListaProximosTurnos.astro';
 import { db } from '../db';
 import { farmacias, turnos } from '../db/schema';
-import { eq, and, lte, gt, sql } from 'drizzle-orm';
+import { eq, and, gte, lte, gt, sql } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime } from '../utils/time';
 
 export const prerender = false;
@@ -13,8 +13,8 @@ export const prerender = false;
 const ahora = nowUtc();
 const ahoraISO = toUtcISO(ahora);
 
-// Query turno actual: inicio <= ahora < fin (estricto en fin para evitar doble a las 08:00)
-const turnoActualResult = await db
+// Query turnos activos: inicio <= ahora < fin (estricto en fin para evitar doble a las 08:00)
+const turnosActivos = await db
   .select({
     id: turnos.id,
     farmaciaId: turnos.farmaciaId,
@@ -41,10 +41,7 @@ const turnoActualResult = await db
     gt(turnos.fin, ahoraISO),
     eq(farmacias.activa, 1)
   ))
-  .orderBy(turnos.inicio)
-  .limit(1);
-
-const turnoActual = turnoActualResult[0] || null;
+  .orderBy(turnos.inicio);
 
 // Próximos 7 días (excluyendo el actual si ya se muestra)
 const finSemana = new Date(ahora);
@@ -95,16 +92,35 @@ const EMERGENCIAS = [
 <Layout title="FarmaGuardia - Farmacias de Turno en Puerto Ayacucho" description="Consulta en tiempo real qué farmacia está de turno 24h en Puerto Ayacucho, Estado Amazonas. Contacto directo y ubicación.">
   <Header />
 
-  <main class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-10">
-    {turnoActual ? (
-      <>
-        <CardTurnoActual 
-          farmacia={turnoActual.farmacia} 
-          turnoId={turnoActual.id} 
-          finTurno={turnoActual.fin} 
-          isCurrent={true} 
-        />
-      </>
+  <main class="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-10">
+    {turnosActivos.length > 0 ? (
+      <section>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Farmacias de turno ahora
+          </h2>
+          <span class="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-medium px-3 py-1 rounded-full">
+            <span class="relative flex w-2 h-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full w-2 h-2 bg-emerald-500"></span>
+            </span>
+            {turnosActivos.length} {turnosActivos.length === 1 ? 'abierta' : 'abiertas'}
+          </span>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {turnosActivos.map(turno => (
+            <CardTurnoActual
+              farmacia={turno.farmacia}
+              turnoId={turno.id}
+              finTurno={turno.fin}
+              isCurrent={true}
+            />
+          ))}
+        </div>
+      </section>
     ) : (
       <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-8 sm:p-10 text-center">
         <svg class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

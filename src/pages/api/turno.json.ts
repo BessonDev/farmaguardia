@@ -7,7 +7,7 @@ import { toUtcISO, nowUtc } from '../../utils/time';
 export const GET: APIRoute = async () => {
   const ahoraISO = toUtcISO(nowUtc());
 
-  const turnoActual = await db
+  const turnosActivos = await db
     .select({
       id: turnos.id,
       inicio: turnos.inicio,
@@ -31,12 +31,13 @@ export const GET: APIRoute = async () => {
       gt(turnos.fin, ahoraISO),
       eq(farmacias.activa, 1)
     ))
-    .limit(1);
+    .orderBy(turnos.inicio);
 
   return new Response(JSON.stringify({
     ok: true,
     generadoEn: ahoraISO,
-    turno: turnoActual[0] ?? null,
+    turnos: turnosActivos,
+    turno: turnosActivos[0] ?? null,
   }), {
     status: 200,
     headers: {
