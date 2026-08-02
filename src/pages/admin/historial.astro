@@ -1,0 +1,191 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdminSidebar from '../../components/AdminSidebar.astro';
+import { db } from '../../db';
+import { farmacias, turnos } from '../../db/schema';
+import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
+import { createUtcFromCaracas, toUtcISO, utcToCaracas } from '../../utils/time';
+
+const PAGE_SIZE = 50;
+const url = new URL(Astro.url);
+
+// Filtros desde query params
+const fFarmacia = url.searchParams.get('farmacia') || '';
+const fDesde = url.searchParams.get('desde') || '';
+const fHasta = url.searchParams.get('hasta') || '';
+const pagina = Math.max(1, Number(url.searchParams.get('pagina')) || 1);
+
+// Construir condiciones de filtro
+const condiciones = [];
+
+if (fFarmacia) {
+  condiciones.push(eq(turnos.farmaciaId, Number(fFarmacia)));
+}
+
+if (fDesde) {
+  // "YYYY-MM-DD" en hora Caracas → inicio del día en UTC (00:00 Caracas = 04:00 UTC)
+  const [y, m, d] = fDesde.split('-').map(Number);
+  const desdeUtc = toUtcISO(createUtcFromCaracas(y, m, d, 0, 0));
+  condiciones.push(gte(turnos.fin, desdeUtc));
+}
+
+if (fHasta) {
+  // Fin del día en Caracas = 23:59 Caracas = 03:59 UTC del día siguiente
+  const [y, m, d] = fHasta.split('-').map(Number);
+  const hastaUtc = toUtcISO(createUtcFromCaracas(y, m, d, 23, 59));
+  condiciones.push(lte(turnos.inicio, hastaUtc));
+}
+
+const where = condiciones.length > 0 ? and(...condiciones) : undefined;
+
+// Total de turnos con filtro (para paginación)
+const totalResult = await db
+  .select({ count: sql`count(*)` })
+  .from(turnos)
+  .where(where);
+const totalTurnos = Number(totalResult[0].count);
+const totalPaginas = Math.max(1, Math.ceil(totalTurnos / PAGE_SIZE));
+const paginaActual = Math.min(pagina, totalPaginas);
+const offset = (paginaActual - 1) * PAGE_SIZE;
+
+// Turnos paginados (todos, ordenados por inicio desc)
+const listaTurnos = await db
+  .select({
+    id: turnos.id,
+    inicio: turnos.inicio,
+    fin: turnos.fin,
+    notas: turnos.notas,
+    nombre: farmacias.nombre,
+    sector: farmacias.sector,
+    farmaciaId: farmacias.id,
+  })
+  .from(turnos)
+  .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
+  .where(where)
+  .orderBy(desc(turnos.inicio))
+  .limit(PAGE_SIZE)
+  .offset(offset);
+
+const todasFarmacias = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
+
+function pageUrl(params: Record<string, string>): string {
+  const p = new URLSearchParams();
+  if (fFarmacia) p.set('farmacia', fFarmacia);
+  if (fDesde) p.set('desde', fDesde);
+  if (fHasta) p.set('hasta', fHasta);
+  for (const [k, v] of Object.entries(params)) p.set(k, v);
+  const qs = p.toString();
+  return qs ? `/admin/historial?${qs}` : '/admin/historial';
+}
+---
+
+<Layout title="Historial de Turnos - FarmaGuardia Admin">
+  <div class="min-h-full flex">
+    <AdminSidebar active="historial" />
+
+    <div class="flex-1 flex flex-col min-w-0">
+      <div class="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+        <span class="font-bold text-gray-900 dark:text-gray-100">Historial</span>
+        <div class="flex gap-2">
+          <a href="/admin" class="text-sm text-primary">Dashboard</a>
+          <a href="/admin/turnos" class="text-sm text-primary">Turnos</a>
+        </div>
+      </div>
+
+      <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Historial de Turnos</h1>
+        </div>
+
+        <!-- Filtros -->
+        <form method="GET" action="/admin/historial" class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-5 mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label for="farmacia" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Farmacia</label>
+              <select id="farmacia" name="farmacia" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <option value="">Todas</option>
+                {todasFarmacias.map(f => (
+                  <option value={f.id} selected={fFarmacia === String(f.id)}>{f.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label for="desde" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Desde</label>
+              <input type="date" id="desde" name="desde" value={fDesde} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+            </div>
+            <div>
+              <label for="hasta" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hasta</label>
+              <input type="date" id="hasta" name="hasta" value={fHasta} class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+            </div>
+            <div class="flex items-end gap-2">
+              <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">Filtrar</button>
+              {(fFarmacia || fDesde || fHasta) && (
+                <a href="/admin/historial" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">Limpiar</a>
+              )}
+            </div>
+          </div>
+        </form>
+
+        <!-- Listado -->
+        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div class="px-4 sm:px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Turnos registrados</h2>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{totalTurnos} turnos</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[600px]">
+              <thead class="bg-gray-50 dark:bg-gray-800/50">
+                <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <th class="px-4 py-3">Farmacia</th>
+                  <th class="px-4 py-3">Inicio</th>
+                  <th class="px-4 py-3">Fin</th>
+                  <th class="px-4 py-3 hidden lg:table-cell">Notas</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {listaTurnos.map(t => (
+                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                      {t.nombre}
+                      {t.sector && <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">· {t.sector}</span>}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                      {new Intl.DateTimeFormat('es-VE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(utcToCaracas(t.inicio))}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                      {new Intl.DateTimeFormat('es-VE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(utcToCaracas(t.fin))}
+                    </td>
+                    <td class="px-4 py-3 hidden lg:table-cell text-gray-500 dark:text-gray-400 max-w-[200px] truncate">{t.notas || '—'}</td>
+                  </tr>
+                ))}
+                {listaTurnos.length === 0 && (
+                  <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      No se encontraron turnos con los filtros aplicados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPaginas > 1 && (
+            <div class="px-4 sm:px-5 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                Página {paginaActual} de {totalPaginas} · {totalTurnos} turnos
+              </span>
+              <div class="flex gap-2">
+                {paginaActual > 1 && (
+                  <a href={pageUrl({ pagina: String(paginaActual - 1) })} class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">← Anterior</a>
+                )}
+                {paginaActual < totalPaginas && (
+                  <a href={pageUrl({ pagina: String(paginaActual + 1) })} class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Siguiente →</a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  </div>
+</Layout>
