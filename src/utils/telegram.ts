@@ -3,13 +3,20 @@
  * Configuración vía variables de entorno:
  * - TELEGRAM_BOT_TOKEN
  * - TELEGRAM_CHAT_ID (o TELEGRAM_ADMIN_CHAT_ID)
+ * - TELEGRAM_WEBHOOK_SECRET (secret para validar updates del webhook)
  */
+
+import { db } from '../db';
+import { farmacias, turnos } from '../db/schema';
+import { eq, and, lte, gt } from 'drizzle-orm';
+import { toUtcISO, nowUtc, formatCaracasDateTime, formatCaracasFullDate } from './time';
 
 interface TelegramMessage {
   chat_id: string | number;
   text: string;
   parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2';
   disable_web_page_preview?: boolean;
+  reply_to_message_id?: number;
 }
 
 interface TelegramResponse {
@@ -91,4 +98,182 @@ export async function testTelegramConnection(): Promise<TelegramResponse> {
 
 export function isTelegramConfigured(): boolean {
   return !!(BOT_TOKEN && CHAT_ID);
+}
+
+export function getTelegramWebhookSecret(): string | undefined {
+  return import.meta.env.TELEGRAM_WEBHOOK_SECRET;
+}
+
+// ─── Bot consultable ───
+
+interface TelegramUpdate {
+  update_id: number;
+  message?: {
+    message_id: number;
+    text?: string;
+    chat: { id: number; type: string; first_name?: string; username?: string };
+    from?: { id: number; first_name?: string; username?: string };
+  };
+}
+
+export interface TurnoActivo {
+  id: number;
+  inicio: string;
+  fin: string;
+  farmacia: {
+    id: number;
+    nombre: string;
+    direccion: string;
+    telefono?: string;
+    whatsapp?: string;
+    sector?: string;
+  };
+}
+
+/**
+ * Consulta los turnos activos ahora (inicio <= ahora < fin estricto)
+ * Compartida entre landing, admin y bot.
+ */
+export async function getTurnosActivos(): Promise<TurnoActivo[]> {
+  const ahoraISO = toUtcISO(nowUtc());
+  return db
+    .select({
+      id: turnos.id,
+      inicio: turnos.inicio,
+      fin: turnos.fin,
+      farmacia: {
+        id: farmacias.id,
+        nombre: farmacias.nombre,
+        direccion: farmacias.direccion,
+        telefono: farmacias.telefono,
+        whatsapp: farmacias.whatsapp,
+        sector: farmacias.sector,
+      },
+    })
+    .from(turnos)
+    .innerJoin(farmacias, eq(turnos.farmaciaId, farmacias.id))
+    .where(and(
+      lte(turnos.inicio, ahoraISO),
+      gt(turnos.fin, ahoraISO),
+      eq(farmacias.activa, 1)
+    ))
+    .orderBy(turnos.inicio);
+}
+
+async function getFarmaciasActivas() {
+  return db
+    .select({
+      id: farmacias.id,
+      nombre: farmacias.nombre,
+      direccion: farmacias.direccion,
+      telefono: farmacias.telefono,
+      whatsapp: farmacias.whatsapp,
+      sector: farmacias.sector,
+      delivery: farmacias.delivery,
+    })
+    .from(farmacias)
+    .where(eq(farmacias.activa, 1))
+    .orderBy(farmacias.nombre);
+}
+
+function formatearTurnos(turnos: TurnoActivo[]): string {
+  if (turnos.length === 0) {
+    return '🚫 No hay farmacia de turno en este momento.\n\nIntenta más tarde o consulta /farmacias para ver las opciones.';
+  }
+
+  const lineas = turnos.map((t, i) => {
+    const f = t.farmacia;
+    const contacto = [
+      f.telefono ? `📞 ${f.telefono}` : null,
+      f.whatsapp ? `💬 ${f.whatsapp}` : null,
+    ].filter(Boolean).join(' · ');
+    const sector = f.sector && f.sector !== 'Centro' ? ` (${f.sector})` : '';
+
+    return [
+      `🏪 <b>${f.nombre}</b>${sector}`,
+      `📍 ${f.direccion}`,
+      contacto ? contacto : '',
+      `⏰ Hasta: ${formatCaracasDateTime(new Date(t.fin))}`,
+    ].filter(Boolean).join('\n');
+  });
+
+  return turnos.length === 1
+    ? `✅ Farmacia de turno ahora:\n\n${lineas[0]}`
+    : `✅ Hay ${turnos.length} farmacias de turno ahora:\n\n${lineas.join('\n\n')}`;
+}
+
+function formatearFarmacias(lista: { nombre: string; sector: string | null; telefono: string | null }[]): string {
+  if (lista.length === 0) {
+    return 'No hay farmacias registradas.';
+  }
+  const lineas = lista.map((f) => {
+    const sector = f.sector && f.sector !== 'Centro' ? ` (${f.sector})` : '';
+    const telefono = f.telefono ? ` 📞 ${f.telefono}` : '';
+    return `• ${f.nombre}${sector}${telefono}`;
+  });
+  return `🏪 <b>Farmacias de Puerto Ayacucho (${lista.length}):</b>\n\n${lineas.join('\n')}`;
+}
+
+/**
+ * Procesa una actualización del bot (mensaje entrante) y responde.
+ * Retorna true si respondió algo, false si el update no requiere respuesta.
+ */
+export async function handleTelegramUpdate(update: TelegramUpdate): Promise<boolean> {
+  const message = update.message;
+  if (!message?.text) return false;
+
+  const chatId = message.chat.id;
+  const text = message.text.trim().toLowerCase();
+  const replyTo = message.message_id;
+
+  const responder = (respuesta: string) =>
+    sendTelegramMessage({
+      chat_id: chatId,
+      text: respuesta,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      reply_to_message_id: replyTo,
+    });
+
+  const HELP = [
+    '🤖 <b>FarmaGuardia Bot</b>',
+    '',
+    'Consulta qué farmacia está de turno en Puerto Ayacucho.',
+    '',
+    'Comandos disponibles:',
+    '• /turno — farmacias de turno ahora',
+    '• /farmacias — catálogo de farmacias activas',
+    '• /ayuda — este mensaje',
+    '',
+    '👥 Reporta datos incorrectos desde la web: farmaguardia.vercel.app',
+  ].join('\n');
+
+  const nombre = message.from?.first_name ? `Hola, ${message.from.first_name}! 👋` : 'Hola! 👋';
+
+  try {
+    if (text === '/start') {
+      await responder(`${nombre}\n\nSoy el bot de FarmaGuardia. Escribe /turno para ver la farmacia de turno ahora o /ayuda para los comandos.`);
+      return true;
+    }
+    if (text === '/ayuda' || text === '/help' || text === '/h') {
+      await responder(HELP);
+      return true;
+    }
+    if (text === '/turno') {
+      const activos = await getTurnosActivos();
+      await responder(formatearTurnos(activos));
+      return true;
+    }
+    if (text === '/farmacias') {
+      const lista = await getFarmaciasActivas();
+      await responder(formatearFarmacias(lista));
+      return true;
+    }
+  } catch (error) {
+    console.error('❌ Error manejando comando de bot:', error);
+    await responder('Ocurrió un error procesando tu solicitud. Intenta de nuevo más tarde. 🙏');
+    return true;
+  }
+
+  return false;
 }
