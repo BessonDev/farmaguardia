@@ -5,7 +5,7 @@ import { db } from '../db';
 import { farmacias, turnos } from '../db/schema';
 import { eq, and, gt, gte, lt, lte, sql } from 'drizzle-orm';
 import { parseCaracasDateTimeLocal, toUtcISO, nowUtc, createUtcFromCaracas } from '../utils/time';
-import { sendReportToTelegram } from '../utils/telegram';
+import { sendReportToTelegram, testTelegramConnection, isTelegramConfigured } from '../utils/telegram';
 import { parseCsvClean } from '../utils/csv';
 
 /**
@@ -264,7 +264,7 @@ export const server = {
       farmaciaId: z.coerce.number(),
       inicio: z.string(),
       fin: z.string(),
-      notas: z.string().optional().default(''),
+      notas: z.string().nullable().optional(),
     }),
     handler: async (input) => {
       const inicio = parseCaracasDateTimeLocal(input.inicio);
@@ -306,7 +306,7 @@ export const server = {
       farmaciaId: z.coerce.number(),
       inicio: z.string(),
       fin: z.string(),
-      notas: z.string().optional().default(''),
+      notas: z.string().nullable().optional(),
     }),
     handler: async (input) => {
       const inicio = parseCaracasDateTimeLocal(input.inicio);
@@ -359,7 +359,7 @@ export const server = {
       horaInicio: z.string(),
       duracionHoras: z.coerce.number().min(1).max(168),
       farmacias: z.array(z.coerce.number()).min(1),
-      notas: z.string().optional().default(''),
+      notas: z.string().nullable().optional(),
       modo: z.enum(['simultaneo', 'secuencial']).default('secuencial'),
     }),
     handler: async (input) => {
@@ -720,6 +720,26 @@ export const server = {
       }
 
       return { ok: true, ...resultados };
+    },
+  }),
+
+  // ─── Test de Telegram ───
+  testTelegram: defineAction({
+    accept: 'form',
+    handler: async () => {
+      if (!isTelegramConfigured()) {
+        return { error: 'Telegram no está configurado: faltan TELEGRAM_BOT_TOKEN y/o TELEGRAM_CHAT_ID en .env' };
+      }
+      try {
+        const res = await testTelegramConnection();
+        if (res.ok) {
+          return { ok: true };
+        }
+        return { error: `El bot respondió con error: ${res.description || 'desconocido'}` };
+      } catch (e) {
+        console.error('Error en test de Telegram:', e);
+        return { error: `Error enviando mensaje: ${String(e)}` };
+      }
     },
   }),
 };

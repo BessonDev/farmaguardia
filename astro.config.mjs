@@ -6,6 +6,7 @@ import node from '@astrojs/node';
 export default defineConfig({
   output: 'server',
   adapter: node({ mode: 'standalone' }),
+  server: { host: true },
   site: process.env.SITE_URL || 'http://localhost:4321',
   integrations: [],
   vite: {

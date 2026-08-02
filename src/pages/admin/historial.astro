@@ -132,7 +132,29 @@ function pageUrl(params: Record<string, string>): string {
             <h2 class="font-semibold text-gray-900 dark:text-gray-100">Turnos registrados</h2>
             <span class="text-xs text-gray-500 dark:text-gray-400">{totalTurnos} turnos</span>
           </div>
-          <div class="overflow-x-auto">
+
+          <!-- Cards (móvil) -->
+          <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-800">
+            {listaTurnos.map(t => (
+              <div class="px-4 py-4">
+                <p class="font-medium text-gray-900 dark:text-gray-100">{t.nombre}</p>
+                {t.sector && <p class="text-xs text-gray-500 dark:text-gray-400">{t.sector}</p>}
+                <div class="mt-2 flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
+                  <span>Inicio: <span class="whitespace-nowrap">{formatCaracasDateTime(new Date(t.inicio))}</span></span>
+                  <span>Fin: <span class="whitespace-nowrap">{formatCaracasDateTime(new Date(t.fin))}</span></span>
+                  {t.notas && <span class="text-gray-500 dark:text-gray-400 mt-1">{t.notas}</span>}
+                </div>
+              </div>
+            ))}
+            {listaTurnos.length === 0 && (
+              <div class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                No se encontraron turnos con los filtros aplicados.
+              </div>
+            )}
+          </div>
+
+          <!-- Tabla (md+) -->
+          <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-sm min-w-[600px]">
               <thead class="bg-gray-50 dark:bg-gray-800/50">
                 <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">

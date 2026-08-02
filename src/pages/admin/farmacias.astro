@@ -8,6 +8,7 @@ import { farmacias } from '../../db/schema';
 import { eq, asc } from 'drizzle-orm';
 
 const result = Astro.getActionResult(actions.crearFarmacia) ?? Astro.getActionResult(actions.editarFarmacia) ?? Astro.getActionResult(actions.eliminarFarmacia);
+const resultImport = Astro.getActionResult(actions.importarFarmacias);
 
 const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
 ---
@@ -28,9 +29,14 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
       <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Farmacias</h1>
-          <button type="button" data-open-nueva class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
-            + Nueva
-          </button>
+          <div class="flex gap-2">
+            <button type="button" data-open-importar class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors whitespace-nowrap">
+              Importar
+            </button>
+            <button type="button" data-open-nueva class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+              + Nueva
+            </button>
+          </div>
         </div>
 
         {result?.error && (
@@ -44,15 +50,66 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
           </div>
         )}
 
+        {resultImport?.error && (
+          <div class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+            {resultImport.error.message}
+          </div>
+        )}
+        {resultImport?.data?.ok && (
+          <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">
+            Importación completada: {resultImport.data.creadas} creadas, {resultImport.data.actualizadas} actualizadas
+            {resultImport.data.errores.length > 0 && `, ${resultImport.data.errores.length} omitidas`}.
+            {resultImport.data.errores.length > 0 && (
+              <ul class="mt-2 list-disc list-inside">
+                {resultImport.data.errores.map(e => <li class="text-xs">{e}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+
         <!-- Listado -->
         <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+          <div class="px-4 sm:px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Farmacias registradas</h2>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{lista.length} farmacias</span>
+          </div>
+
+          <!-- Cards (móvil) -->
+          <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-800">
+            {lista.map(f => (
+              <div class="px-4 py-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="font-medium text-gray-900 dark:text-gray-100">{f.nombre}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{f.direccion}</p>
+                  </div>
+                  <span class={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap ${f.activa ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                    {f.activa ? 'Activa' : 'Inactiva'}
+                  </span>
+                </div>
+                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300">
+                  {f.sector && <span>Sector: {f.sector}</span>}
+                  {f.telefono && <span>Tel: {f.telefono}</span>}
+                </div>
+                <div class="mt-3 flex items-center gap-4 text-sm">
+                  <button type="button" data-editar={f.id} class="text-primary hover:underline">Editar</button>
+                  <form method="POST" action={actions.eliminarFarmacia} onsubmit="return confirm('¿Eliminar esta farmacia? Se eliminarán sus turnos.')">
+                    <input type="hidden" name="id" value={f.id} />
+                    <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Eliminar</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <!-- Tabla (md+) -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm min-w-[600px]">
               <thead class="bg-gray-50 dark:bg-gray-800/50">
                 <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                   <th class="px-4 py-3">Nombre</th>
-                  <th class="px-4 py-3 hidden md:table-cell">Sector</th>
-                  <th class="px-4 py-3 hidden lg:table-cell">Teléfono</th>
+                  <th class="px-4 py-3">Sector</th>
+                  <th class="px-4 py-3">Teléfono</th>
                   <th class="px-4 py-3">Estado</th>
                   <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
@@ -64,8 +121,8 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
                       <p class="font-medium text-gray-900 dark:text-gray-100">{f.nombre}</p>
                       <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[220px] lg:max-w-xs">{f.direccion}</p>
                     </td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300 hidden md:table-cell">{f.sector}</td>
-                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300 hidden lg:table-cell">{f.telefono || '—'}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{f.sector}</td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{f.telefono || '—'}</td>
                     <td class="px-4 py-3">
                       <span class={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${f.activa ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                         {f.activa ? 'Activa' : 'Inactiva'}
@@ -148,6 +205,58 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
     </form>
   </AdminModal>
 
+  <!-- Modal importar farmacias -->
+  <AdminModal title="Importar farmacias (CSV)" id="modal-importar" size="md">
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+      Las filas se importan por nombre de farmacia: si el nombre ya existe, se omite salvo que marques "sobreescribir existentes".
+    </p>
+    <form method="POST" action={actions.importarFarmacias} enctype="multipart/form-data" id="import-form">
+      <div class="mb-4">
+        <label for="archivo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Archivo CSV *</label>
+        <input
+          type="file"
+          id="archivo"
+          name="archivo"
+          accept=".csv,text/csv"
+          required
+          class="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:px-4 file:py-2 file:border-0 file:rounded-lg file:bg-primary file:text-white file:text-sm file:font-medium hover:file:bg-primary-dark"
+        />
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Columnas: nombre, direccion, sector, telefono, whatsapp, latitud, longitud, delivery, activa</p>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-4 cursor-pointer">
+        <input type="checkbox" name="sobreescribir" value="1" class="rounded border-gray-300 text-primary focus:ring-primary" />
+        Sobre-escribir farmacias existentes (mismo nombre)
+      </label>
+
+      <!-- Preview en cliente -->
+      <div id="preview-container" class="hidden mb-4">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm">Vista previa</h3>
+        <div class="overflow-x-auto border border-gray-200 dark:border-gray-800 rounded-lg">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800/50">
+              <tr id="preview-header" class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide"></tr>
+            </thead>
+            <tbody id="preview-body" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+          </table>
+        </div>
+        <p id="preview-count" class="text-xs text-gray-500 dark:text-gray-400 mt-2"></p>
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
+          Importar
+        </button>
+        <a href="/plantilla-farmacias.csv" download class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Plantilla CSV
+        </a>
+      </div>
+    </form>
+  </AdminModal>
+
   <script is:inline define:vars={{ farmaciasData: lista }}>
     const form = document.getElementById('farmacia-form');
     const modalTitle = document.querySelector('#modal-farmacia h2');
@@ -196,5 +305,60 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
 
     document.querySelectorAll('[data-open-nueva]').forEach(btn => btn.addEventListener('click', openNueva));
     document.querySelectorAll('[data-editar]').forEach(btn => btn.addEventListener('click', () => openEditar(Number(btn.dataset.editar))));
+    document.querySelectorAll('[data-open-importar]').forEach(btn => btn.addEventListener('click', () => window.FarmaGuardiaAdmin.openModal('modal-importar')));
+  </script>
+
+  <script is:inline>
+    const archivoInput = document.getElementById('archivo');
+    const previewContainer = document.getElementById('preview-container');
+    const previewHeader = document.getElementById('preview-header');
+    const previewBody = document.getElementById('preview-body');
+    const previewCount = document.getElementById('preview-count');
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let field = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (inQuotes) {
+          if (char === '"') {
+            if (text[i + 1] === '"') { field += '"'; i++; }
+            else inQuotes = false;
+          } else field += char;
+        } else if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          row.push(field); field = '';
+        } else if (char === '\n' || char === '\r') {
+          row.push(field); field = '';
+          rows.push(row); row = [];
+          if (char === '\r' && text[i + 1] === '\n') i++;
+        } else {
+          field += char;
+        }
+      }
+      if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+      return rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c !== ''));
+    }
+
+    archivoInput.addEventListener('change', () => {
+      const file = archivoInput.files && archivoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rows = parseCsv(String(e.target.result));
+        if (rows.length < 2) {
+          previewContainer.classList.add('hidden');
+          return;
+        }
+        previewHeader.innerHTML = rows[0].map(c => `<th class="px-3 py-2 font-medium">${c}</th>`).join('');
+        previewBody.innerHTML = rows.slice(1, 11).map(r => `<tr>${r.map(c => `<td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap max-w-[180px] truncate">${c}</td>`).join('')}</tr>`).join('');
+        previewCount.textContent = `${rows.length - 1} filas en el archivo${rows.length > 11 ? ' (mostrando las primeras 10)' : ''}.`;
+        previewContainer.classList.remove('hidden');
+      };
+      reader.readAsText(file);
+    });
   </script>
 </Layout>

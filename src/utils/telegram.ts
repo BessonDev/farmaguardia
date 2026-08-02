@@ -11,6 +11,16 @@ import { farmacias, turnos } from '../db/schema';
 import { eq, and, lte, gt } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime, formatCaracasFullDate } from './time';
 
+/**
+ * Lee una variable de entorno con fallback a process.env.
+ * import.meta.env (Vite/Astro) no existe al correr scripts con tsx,
+ * por eso se cae a process.env (que el script de polling puebla desde .env).
+ */
+function getEnv(name: string): string | undefined {
+  const meta = (import.meta as { env?: Record<string, string | undefined> }).env;
+  return meta?.[name] ?? process.env[name];
+}
+
 interface TelegramMessage {
   chat_id: string | number;
   text: string;
