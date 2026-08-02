@@ -12,13 +12,13 @@ import { eq, and, lte, gt } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime, formatCaracasFullDate } from './time';
 
 /**
- * Lee una variable de entorno con fallback a process.env.
- * import.meta.env (Vite/Astro) no existe al correr scripts con tsx,
- * por eso se cae a process.env (que el script de polling puebla desde .env).
+ * Lee una variable de entorno priorizando process.env (runtime).
+ * import.meta.env (Vite/Astro) se hornea en build time y no existe al correr
+ * scripts con tsx, por eso process.env va primero (igual que getAdminPassword).
  */
 function getEnv(name: string): string | undefined {
   const meta = (import.meta as { env?: Record<string, string | undefined> }).env;
-  return meta?.[name] ?? process.env[name];
+  return process.env[name] ?? meta?.[name];
 }
 
 interface TelegramMessage {
@@ -35,8 +35,8 @@ interface TelegramResponse {
   description?: string;
 }
 
-const BOT_TOKEN = import.meta.env.TELEGRAM_BOT_TOKEN;
-const CHAT_ID = import.meta.env.TELEGRAM_CHAT_ID || import.meta.env.TELEGRAM_ADMIN_CHAT_ID;
+const BOT_TOKEN = getEnv('TELEGRAM_BOT_TOKEN');
+const CHAT_ID = getEnv('TELEGRAM_CHAT_ID') || getEnv('TELEGRAM_ADMIN_CHAT_ID');
 
 function getApiUrl(method: string): string {
   return `https://api.telegram.org/bot${BOT_TOKEN}/${method}`;
@@ -111,7 +111,7 @@ export function isTelegramConfigured(): boolean {
 }
 
 export function getTelegramWebhookSecret(): string | undefined {
-  return import.meta.env.TELEGRAM_WEBHOOK_SECRET;
+  return getEnv('TELEGRAM_WEBHOOK_SECRET');
 }
 
 // ─── Bot consultable ───
@@ -245,7 +245,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<bool
       reply_to_message_id: replyTo,
     });
 
-  const siteUrl = import.meta.env.SITE_URL || 'https://farmaguardia.example.com';
+  const siteUrl = getEnv('SITE_URL') || 'https://farmaguardia.example.com';
   const HELP = [
     '🤖 <b>FarmaGuardia Bot</b>',
     '',
