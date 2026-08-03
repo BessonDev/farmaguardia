@@ -181,14 +181,29 @@ export const server = {
       sobreescribir: z.string().optional(),
     }),
     handler: async (input) => {
-      const texto = await input.archivo.text();
-      const filas = parseCsvClean(texto);
+      const buffer = Buffer.from(await input.archivo.arrayBuffer());
+
+      // Detectar formato por magic bytes: XLSX es un ZIP (PK), CSV es texto plano
+      const esXlsx = buffer.length > 2 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+
+      let filas: (string | number | boolean | Date | null)[][] = [];
+
+      if (esXlsx) {
+        const { readSheet } = await import('read-excel-file/node');
+        try {
+          filas = await readSheet(buffer);
+        } catch {
+          throw new ActionError({ code: 'BAD_REQUEST', message: 'No se pudo leer el archivo .xlsx. Verifica que sea un Excel válido.' });
+        }
+      } else {
+        filas = parseCsvClean(buffer.toString('utf-8'));
+      }
 
       if (filas.length < 2) {
         throw new ActionError({ code: 'BAD_REQUEST', message: 'El archivo no tiene datos. Usa la plantilla descargable.' });
       }
 
-      const header = filas[0].map(c => c.toLowerCase());
+      const header = filas[0].map(c => String(c).toLowerCase().trim());
       const col = {
         nombre: header.indexOf('nombre'),
         direccion: header.indexOf('direccion'),
@@ -202,7 +217,18 @@ export const server = {
       };
 
       if (col.nombre === -1 || col.direccion === -1) {
-        throw new ActionError({ code: 'BAD_REQUEST', message: 'El CSV debe tener al menos las columnas "nombre" y "direccion".' });
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'El archivo debe tener al menos las columnas "nombre" y "direccion".' });
+      }
+
+      // Normaliza celdas de XLSX (booleano/número) y CSV (texto) a verdadero/falso
+      function normalizarBooleano(valor: unknown, porDefecto: boolean): boolean {
+        if (valor === null || valor === undefined || valor === '') return porDefecto;
+        if (typeof valor === 'boolean') return valor;
+        if (typeof valor === 'number') return valor !== 0;
+        const s = String(valor).trim().toLowerCase();
+        if (['si', 'sí', '1', 'true', 'x', 'yes'].includes(s)) return true;
+        if (['no', '0', 'false'].includes(s)) return false;
+        return porDefecto;
       }
 
       const filaFarmacias = filas.slice(1);
@@ -210,7 +236,7 @@ export const server = {
 
       for (let i = 0; i < filaFarmacias.length; i++) {
         const f = filaFarmacias[i];
-        const nombre = f[col.nombre];
+        const nombre = f[col.nombre] != null ? String(f[col.nombre]).trim() : '';
         if (!nombre) {
           resultados.errores.push(`Fila ${i + 2}: nombre vacío`);
           continue;
@@ -218,14 +244,14 @@ export const server = {
 
         const datos = {
           nombre,
-          direccion: f[col.direccion] ?? '',
-          sector: col.sector >= 0 && f[col.sector] ? f[col.sector] : 'Centro',
-          telefono: col.telefono >= 0 && f[col.telefono] ? f[col.telefono] : null,
-          whatsapp: col.whatsapp >= 0 && f[col.whatsapp] ? f[col.whatsapp] : null,
-          latitud: col.latitud >= 0 && f[col.latitud] ? Number(f[col.latitud]) : null,
-          longitud: col.longitud >= 0 && f[col.longitud] ? Number(f[col.longitud]) : null,
-          delivery: col.delivery >= 0 ? ['si', 'sí', '1', 'true'].includes(f[col.delivery].toLowerCase()) : false,
-          activa: col.activa >= 0 ? !['no', '0', 'false'].includes(f[col.activa].toLowerCase()) : true,
+          direccion: f[col.direccion] != null ? String(f[col.direccion]) : '',
+          sector: col.sector >= 0 && f[col.sector] != null && String(f[col.sector]) !== '' ? String(f[col.sector]) : 'Centro',
+          telefono: col.telefono >= 0 && f[col.telefono] != null && String(f[col.telefono]) !== '' ? String(f[col.telefono]) : null,
+          whatsapp: col.whatsapp >= 0 && f[col.whatsapp] != null && String(f[col.whatsapp]) !== '' ? String(f[col.whatsapp]) : null,
+          latitud: col.latitud >= 0 && f[col.latitud] != null && String(f[col.latitud]) !== '' ? Number(f[col.latitud]) : null,
+          longitud: col.longitud >= 0 && f[col.longitud] != null && String(f[col.longitud]) !== '' ? Number(f[col.longitud]) : null,
+          delivery: col.delivery >= 0 ? normalizarBooleano(f[col.delivery], false) : false,
+          activa: col.activa >= 0 ? normalizarBooleano(f[col.activa], true) : true,
         };
 
         const existente = await db.select({ id: farmacias.id }).from(farmacias).where(eq(farmacias.nombre, nombre)).limit(1);

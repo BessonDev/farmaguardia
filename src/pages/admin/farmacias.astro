@@ -206,18 +206,18 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
   </AdminModal>
 
   <!-- Modal importar farmacias -->
-  <AdminModal title="Importar farmacias (CSV)" id="modal-importar" size="md">
+  <AdminModal title="Importar farmacias (Excel)" id="modal-importar" size="md">
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
       Las filas se importan por nombre de farmacia: si el nombre ya existe, se omite salvo que marques "sobreescribir existentes".
     </p>
     <form method="POST" action={actions.importarFarmacias} enctype="multipart/form-data" id="import-form">
       <div class="mb-4">
-        <label for="archivo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Archivo CSV *</label>
+        <label for="archivo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Archivo (.xlsx o .csv) *</label>
         <input
           type="file"
           id="archivo"
           name="archivo"
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           required
           class="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:px-4 file:py-2 file:border-0 file:rounded-lg file:bg-primary file:text-white file:text-sm file:font-medium hover:file:bg-primary-dark"
         />
@@ -247,11 +247,11 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
         <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
           Importar
         </button>
-        <a href="/plantilla-farmacias.csv" download class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+        <a href="/plantilla-farmacias.xlsx" download class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          Plantilla CSV
+          Plantilla Excel
         </a>
       </div>
     </form>
@@ -308,7 +308,7 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
     document.querySelectorAll('[data-open-importar]').forEach(btn => btn.addEventListener('click', () => window.FarmaGuardiaAdmin.openModal('modal-importar')));
   </script>
 
-  <script is:inline>
+  <script>
     const archivoInput = document.getElementById('archivo');
     const previewContainer = document.getElementById('preview-container');
     const previewHeader = document.getElementById('preview-header');
@@ -343,22 +343,35 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
       return rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c !== ''));
     }
 
-    archivoInput.addEventListener('change', () => {
+    async function leerXlsx(file) {
+      const readXlsxFile = (await import('read-excel-file/browser')).default;
+      const rows = await readXlsxFile(file);
+      return rows.map(r => r.map(c => c instanceof Date ? c.toLocaleDateString('es-VE') : (c == null ? '' : String(c))));
+    }
+
+    function mostrarPreview(rows) {
+      if (rows.length < 2) {
+        previewContainer.classList.add('hidden');
+        return;
+      }
+      previewHeader.innerHTML = rows[0].map(c => `<th class="px-3 py-2 font-medium">${c}</th>`).join('');
+      previewBody.innerHTML = rows.slice(1, 11).map(r => `<tr>${r.map(c => `<td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap max-w-[180px] truncate">${c}</td>`).join('')}</tr>`).join('');
+      previewCount.textContent = `${rows.length - 1} filas en el archivo${rows.length > 11 ? ' (mostrando las primeras 10)' : ''}.`;
+      previewContainer.classList.remove('hidden');
+    }
+
+    archivoInput.addEventListener('change', async () => {
       const file = archivoInput.files && archivoInput.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const rows = parseCsv(String(e.target.result));
-        if (rows.length < 2) {
-          previewContainer.classList.add('hidden');
-          return;
-        }
-        previewHeader.innerHTML = rows[0].map(c => `<th class="px-3 py-2 font-medium">${c}</th>`).join('');
-        previewBody.innerHTML = rows.slice(1, 11).map(r => `<tr>${r.map(c => `<td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap max-w-[180px] truncate">${c}</td>`).join('')}</tr>`).join('');
-        previewCount.textContent = `${rows.length - 1} filas en el archivo${rows.length > 11 ? ' (mostrando las primeras 10)' : ''}.`;
-        previewContainer.classList.remove('hidden');
-      };
-      reader.readAsText(file);
+      try {
+        const esXlsx = /\.xlsx$/i.test(file.name);
+        const rows = esXlsx
+          ? await leerXlsx(file)
+          : parseCsv(await file.text());
+        mostrarPreview(rows);
+      } catch {
+        previewContainer.classList.add('hidden');
+      }
     });
   </script>
 </Layout>
