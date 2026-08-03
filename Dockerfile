@@ -2,6 +2,11 @@
 FROM node:22-slim AS build
 WORKDIR /app
 
+# SITE_URL como build arg: Astro lo hornea en build time para canonical/og:url.
+# En Dokploy se pasa en la sección "Build args" del servicio.
+ARG SITE_URL
+ENV SITE_URL=$SITE_URL
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
