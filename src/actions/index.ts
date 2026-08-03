@@ -3,7 +3,7 @@ import { z } from 'astro/zod';
 import { timingSafeEqual as nodeTimingSafeEqual, randomBytes } from 'node:crypto';
 import { db } from '../db';
 import { farmacias, turnos } from '../db/schema';
-import { eq, and, gt, gte, lt, lte, sql } from 'drizzle-orm';
+import { eq, and, gt, gte, lt, lte, sql, inArray } from 'drizzle-orm';
 import { parseCaracasDateTimeLocal, toUtcISO, nowUtc, createUtcFromCaracas } from '../utils/time';
 import { sendReportToTelegram, testTelegramConnection, isTelegramConfigured } from '../utils/telegram';
 import { parseCsvClean } from '../utils/csv';
@@ -403,12 +403,25 @@ export const server = {
         throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha de fin debe ser posterior a la fecha de inicio' });
       }
 
+      // Solo las farmacias activas seleccionadas entran en la rotación
+      const activas = await db
+        .select({ id: farmacias.id })
+        .from(farmacias)
+        .where(and(eq(farmacias.activa, 1), inArray(farmacias.id, input.farmacias)));
+
+      const idsActivas = activas.map(a => a.id);
+      const inactivas = input.farmacias.length - idsActivas.length;
+
+      if (idsActivas.length === 0) {
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'Ninguna farmacia seleccionada está activa. Activá al menos una en Farmacias.' });
+      }
+
       const generados: { farmaciaId: number; inicio: string; fin: string }[] = [];
       const omitidos: { inicio: string; razon: string }[] = [];
 
       if (input.modo === 'simultaneo') {
         // Modo simultáneo: todas las farmacias cubren el mismo rango completo
-        for (const farmaciaId of input.farmacias) {
+        for (const farmaciaId of idsActivas) {
           const inicioISO = toUtcISO(inicioBase);
           const finISO = toUtcISO(finLimite);
 
@@ -442,7 +455,7 @@ export const server = {
         let guard = 0;
 
         while (inicio < finLimite && guard < 2000) {
-          const farmaciaId = input.farmacias[idx % input.farmacias.length];
+          const farmaciaId = idsActivas[idx % idsActivas.length];
           const fin = new Date(inicio.getTime() + duracionMs);
           const inicioISO = toUtcISO(inicio);
           const finISO = toUtcISO(fin);
@@ -475,7 +488,7 @@ export const server = {
         }
       }
 
-      return { ok: true, generados: generados.length, omitidos: omitidos.length };
+      return { ok: true, generados: generados.length, omitidos: omitidos.length, inactivas };
     },
   }),
 

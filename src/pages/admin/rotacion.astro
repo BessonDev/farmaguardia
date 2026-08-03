@@ -42,6 +42,7 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
         {result?.data?.ok && (
           <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">
             Rotación generada: <strong>{result.data.generados}</strong> turnos creados
+            {result.data.inactivas > 0 && `, ${result.data.inactivas} omitidas por estar inactivas.`}
             {result.data.omitidos > 0 && `, ${result.data.omitidos} omitidos por solapamiento.`}
           </div>
         )}
