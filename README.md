@@ -24,11 +24,11 @@
 
 **FarmaGuardia** es un sistema web para la comunidad de **Puerto Ayacucho, Estado Amazonas (Venezuela)** que resuelve una necesidad real: saber **qué farmacia está de turno ahora mismo**, sin llamar a todas.
 
-- 🌐 **Landing pública**: turno activo, mapa con la farmacia, teléfono y WhatsApp.
-- 🔔 **Bot de Telegram**: consulta el turno desde el chat del bot.
-- 📢 **Reportes comunitarios**: si la farmacia está cerrada o los datos son incorrectos, cualquiera lo reporta (con deduplicación por huella).
-- 🛠️ **Panel admin**: CRUD de farmacias y turnos, generador de rotaciones automático, importación CSV y analytics de visitas/reportes.
-- 📱 **PWA**: instalable y con modo offline (Service Worker + manifest).
+- 🌐 **Landing pública**: turno activo, mapa OSM con la farmacia, teléfono y WhatsApp.
+- 🤖 **Bot de Telegram**: consulta `/turno` y `/farmacias` desde el chat del bot, con webhook HTTPS + secret token.
+- 📢 **Reportes comunitarios**: si la farmacia está cerrada o los datos son incorrectos, cualquiera lo reporta y otros lo confirman (dedupe por huella local + IP).
+- 🛠️ **Panel admin**: CRUD de farmacias y turnos, generador de rotaciones (secuencial/simultáneo), override de emergencia, importación CSV/Excel, historial paginado y analytics.
+- 📱 **PWA**: instalable y con modo offline (Service Worker + manifest) y aviso "Datos de HH:MM".
 
 ---
 
@@ -37,9 +37,14 @@
 | | |
 |---|---|
 | 🗓️ **Turno en vivo** | Landing SSR que muestra el turno vigente al instante |
-| 🗺️ **Mapa OpenStreetMap** | Ubicación exacta de la farmacia de turno |
-| 🤖 **Bot Telegram** | `/turno` desde cualquier chat |
+| 🗺️ **Mapa OpenStreetMap** | Ubicación exacta de la farmacia de turno (iframe por card) |
+| 🤖 **Bot Telegram** | `/turno`, `/farmacias`, `/ayuda` con webhook + secret token |
+| 📥 **Import CSV/Excel** | Carga masiva de farmacias y cronogramas, plantilla descargable |
+| 🔁 **Rotación automática** | Generación masiva de turnos secuencial o simultáneo con validación de solapamientos |
+| ⚡ **Override de emergencia** | Sustituir la farmacia de turno al instante desde el panel |
+| 🚨 **Reportes multi-usuario** | Reportar y confirmar con dedupe por huella + IP |
 | 📊 **Analytics** | Visitas, reportes y su evolución en el panel |
+| 📱 **PWA offline** | Service Worker con aviso de datos cacheados |
 | 🔒 **Auth simple** | Sesión con cookie httpOnly + SameSite=Lax + Secure (prod) |
 | 📦 **Docker listo** | Multi-stage, migraciones automáticas al arrancar |
 | 🕐 **Zona Caracas (UTC-4)** | Manejo de fechas correcto en la rotación |
@@ -73,19 +78,34 @@ El admin vive en `http://localhost:4321/admin` con la contraseña de `ADMIN_PASS
 | `ADMIN_PASSWORD` | ✅ Sí | Contraseña del panel de administración |
 | `SITE_URL` | ✅ Sí | URL pública del sitio (ej: `https://farmaguardia.tudominio.com`) |
 | `TELEGRAM_BOT_TOKEN` | ⬜ No | Token del bot (reportes + bot consultable) |
-| `TELEGRAM_CHAT_ID` | ⬜ No | Chat/grupo donde llegan los reportes |
+| `TELEGRAM_CHAT_ID` | ⬜ No | Chat/grupo donde llegan los reportes y el test del bot |
 | `TELEGRAM_WEBHOOK_SECRET` | ⬜ No | Secret para validar updates del webhook del bot |
 | `FINGERPRINT_SECRET` | ⬜ No | Secret HMAC para hashear IPs en reportes (distinto en prod) |
 | `DB_PATH` | ⬜ No | Ruta del archivo `.db` (default: `./farmaguardia.db`) |
 | `PORT` / `HOST` | ⬜ No | Puerto/host del server standalone (default: `8080` / `0.0.0.0`) |
 
+> ⚠️ **Env vars y build**: Astro hornea `import.meta.env` en build time. Para que el deploy lea los valores correctos en runtime, el código prioriza `process.env` (funciones `getAdminPassword()` y `getEnv()`). En Dokploy las variables deben estar en **Environment** (runtime), no solo en la fase de build.
+
 ### Bot de Telegram (opcional)
+
+El bot responde mensajes entrantes vía webhook. Configurá el webhook apuntando a tu dominio:
 
 ```sh
 TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... SITE_URL=https://farmaguardia.tudominio.com npm run bot:set-webhook
 ```
 
-> El webhook del bot apunta a `POST {SITE_URL}/api/telegram/webhook`. Requiere HTTPS público (ej: con Dokploy/Let's Encrypt).
+- El webhook apunta a `POST {SITE_URL}/api/telegram/webhook`. Requiere HTTPS público.
+- **El `secret_token` debe coincidir en DOS lados**: la env `TELEGRAM_WEBHOOK_SECRET` (que valida el endpoint) y el campo `secret_token` del `setWebhook` (lo que Telegram manda en el header `x-telegram-bot-api-secret-token`).
+- Si configurás el secret pero no lo pasás en el `setWebhook`, el bot devuelve `401 Unauthorized` y no responde.
+- Comandos: `/turno`, `/farmacias`, `/ayuda`, `/start`.
+
+Verificar el estado del webhook:
+
+```sh
+curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
+```
+
+Debe mostrar la `url` configurada y `pending_update_count: 0`.
 
 ---
 
@@ -114,8 +134,11 @@ docker run -d \
 
 - 🏥 **Farmacias**: crear, editar, activar/desactivar, eliminar.
 - 🗓️ **Turnos**: crear, editar, eliminar y **generar rotaciones** (secuencial o simultáneo) con validación de solapamientos.
-- 📥 **Importar CSV**: carga masiva con plantilla descargable y opción de sobrescribir.
+- ⚡ **Override de emergencia**: sustituir la farmacia de turno actual por un respaldo al instante.
+- 📥 **Importar CSV/Excel**: carga masiva de farmacias o cronogramas con plantilla descargable y opción de sobrescribir.
+- 🕘 **Historial**: turnos pasados y futuros paginado con filtros.
 - 📊 **Analytics**: visitas y reportes del día/mes.
+- 🤖 **Test de Telegram**: botón para enviar un mensaje de prueba al chat del admin.
 
 ---
 
@@ -125,13 +148,13 @@ docker run -d \
 src/
 ├── pages/
 │   ├── index.astro                # Landing pública (SSR)
-│   ├── api/                       # Endpoints (turno.json, reportes, visita, webhook)
-│   └── admin/                     # Panel admin (login, dashboard, CRUDs)
-├── components/                    # Cards, sidebar, listas
+│   ├── api/                       # Endpoints (turno.json, reportes, visita, telegram/webhook)
+│   └── admin/                     # Panel admin (login, dashboard, farmacias, turnos, rotacion, historial)
+├── components/                    # Cards, sidebar, modales, listas
 ├── layouts/                       # Layout principal + modal de reporte
-├── actions/                       # Astro Actions (auth, CRUDs, rotación, import)
+├── actions/                       # Astro Actions (auth, CRUDs, rotación, import, test Telegram)
 ├── db/                            # Conexión + schema Drizzle
-├── utils/                         # time, telegram, fingerprint
+├── utils/                         # time, telegram, csv, fingerprint
 └── middleware.ts                  # Auth + sesión + actions
 ```
 
@@ -149,6 +172,28 @@ src/
 | `npm run db:seed` | Seed de prueba (12 farmacias + turnos) |
 | `npm run db:studio` | Explorar la base con Drizzle Studio |
 | `npm run bot:set-webhook` | Configurar webhook del bot de Telegram |
+
+---
+
+## 🐛 Solución de problemas
+
+### Login no hace nada / errores sin mensaje
+Las Astro Actions que devuelven `{ error }` como data no muestran nada en la UI. Siempre lanzar `throw new ActionError({ code, message })` para que `result?.error` funcione.
+
+### `ADMIN_PASSWORD` horneada en build / login rechazado en prod
+Si Dokploy no inyecta las env vars en la fase de build, `import.meta.env.ADMIN_PASSWORD` queda como `undefined` en el bundle. El código prioriza `process.env` en runtime: verificá que la variable esté en **Environment** (runtime) y no solo como build arg.
+
+### Webhook de Telegram devuelve `401 Unauthorized`
+El `secret_token` está configurado en el endpoint pero no en el `setWebhook` (o viceversa). Ambos deben coincidir. Re-ejecutá `npm run bot:set-webhook` con el mismo `TELEGRAM_WEBHOOK_SECRET`.
+
+### Canonical / OpenGraph apuntan a `localhost`
+`astro.config.mjs` usa `site: process.env.SITE_URL || 'http://localhost:4321'`. Si el build corre sin `SITE_URL`, los meta `canonical`/`og:url` quedan con `localhost`. Asegurate de que `SITE_URL` esté disponible **durante el build** (env de build), no solo en runtime.
+
+### Favicon/PWA viejo en el teléfono
+El Service Worker cachea los assets. Si seguís viendo el favicon viejo de Astro tras un deploy, hacé hard refresh (Ctrl+Shift+R) o reinstalá la PWA (quitar de apps y volver a instalar).
+
+### Cambios de env no se reflejan
+En dev, reiniciá el server (`astro dev stop` + `astro dev --background`) para recargar `.env`. En prod, la env debe estar en Dokploy y requiere redeploy.
 
 ---
 
