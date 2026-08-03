@@ -68,6 +68,11 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Hora de Caracas</p>
             </div>
             <div>
+              <label for="horaFin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hora de fin *</label>
+              <input type="time" id="horaFin" name="horaFin" required value="23:59" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Hora de Caracas</p>
+            </div>
+            <div>
               <label for="duracionHoras" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duración por turno (horas) *</label>
               <input type="number" id="duracionHoras" name="duracionHoras" required min="1" max="168" value="24" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1" id="duracion-help">Turno estándar: 24h (de 08:00 a 08:00)</p>
@@ -84,7 +89,7 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
                   <span>Secuencial: rotan una por período</span>
                 </label>
               </div>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="modo-help">En modo simultáneo, la duración define la hora de fin del rango completo.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2" id="modo-help">Las farmacias rotan en cadena hasta la fecha y hora de fin.</p>
             </div>
             <div class="sm:col-span-2">
               <label for="notas" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
@@ -105,6 +110,9 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
                 <p class="text-sm text-amber-600 dark:text-amber-400">No hay farmacias activas. Activa alguna en <a href="/admin/farmacias" class="underline">Farmacias</a>.</p>
               )}
             </div>
+            <div class="sm:col-span-2">
+              <p id="estimado" class="text-sm text-gray-500 dark:text-gray-400"></p>
+            </div>
             <div class="sm:col-span-2 flex gap-3 pt-2">
               <button type="submit" disabled={activas.length === 0} class="px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors">
                 Generar turnos
@@ -121,19 +129,60 @@ const en7diasStr = `${en7dias.getUTCFullYear()}-${String(en7dias.getUTCMonth() +
     const duracionHelp = document.getElementById('duracion-help');
     const modoHelp = document.getElementById('modo-help');
     const duracionField = document.getElementById('duracionHoras');
+    const fechaInicioInput = document.getElementById('fechaInicio');
+    const fechaFinInput = document.getElementById('fechaFin');
+    const horaInicioInput = document.getElementById('horaInicio');
+    const horaFinInput = document.getElementById('horaFin');
+    const farmaciaCheckboxes = document.querySelectorAll('input[name="farmacias"]');
+    const estimadoEl = document.getElementById('estimado');
 
     function updateModoHelp() {
       const simultaneo = document.querySelector('input[name="modo"]:checked')?.value === 'simultaneo';
       if (duracionHelp) duracionHelp.textContent = simultaneo
-        ? 'Se ignora: el rango completo lo define la fecha de fin'
+        ? 'Se ignora: el rango completo lo definen fecha y hora de fin'
         : 'Turno estándar: 24h (de 08:00 a 08:00)';
       if (modoHelp) modoHelp.textContent = simultaneo
-        ? 'Cada farmacia seleccionada recibe un turno que cubre TODO el rango (fecha inicio → fecha fin).'
-        : 'Las farmacias rotan en cadena: una por período, la siguiente inicia cuando termina la anterior.';
+        ? 'Cada farmacia seleccionada recibe un turno que cubre TODO el rango (fecha y hora de inicio → fecha y hora de fin).'
+        : 'Las farmacias rotan en cadena: una por período, la siguiente inicia cuando termina la anterior, hasta la fecha y hora de fin.';
       if (duracionField) duracionField.disabled = simultaneo;
     }
 
-    modoInputs.forEach(input => input.addEventListener('change', updateModoHelp));
+    function toMs(dateStr, timeStr) {
+      if (!dateStr || !timeStr) return NaN;
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const [hh, mm] = timeStr.split(':').map(Number);
+      return new Date(Date.UTC(y, m - 1, d, hh, mm)).getTime();
+    }
+
+    function updateEstimado() {
+      const nF = Array.from(farmaciaCheckboxes).filter(c => c.checked).length;
+      if (nF === 0) {
+        estimadoEl.textContent = 'Seleccioná al menos una farmacia para generar turnos.';
+        estimadoEl.classList.add('text-amber-600', 'dark:text-amber-400');
+        return;
+      }
+      estimadoEl.classList.remove('text-amber-600', 'dark:text-amber-400');
+      const simultaneo = document.querySelector('input[name="modo"]:checked')?.value === 'simultaneo';
+      if (simultaneo) {
+        estimadoEl.textContent = `Se crearán ${nF} turno${nF === 1 ? '' : 's'} (uno por farmacia seleccionada).`;
+        return;
+      }
+      const ini = toMs(fechaInicioInput.value, horaInicioInput.value);
+      const fin = toMs(fechaFinInput.value, horaFinInput.value);
+      const dur = Number(duracionField.value);
+      if (Number.isNaN(ini) || Number.isNaN(fin) || ini >= fin || !(dur > 0)) {
+        estimadoEl.textContent = 'Revisá las fechas, horas y duración: la fin debe ser posterior al inicio.';
+        estimadoEl.classList.add('text-amber-600', 'dark:text-amber-400');
+        return;
+      }
+      const estimados = Math.ceil((fin - ini) / (dur * 3600000));
+      estimadoEl.textContent = `Se generarán aproximadamente ${estimados} turno${estimados === 1 ? '' : 's'} (de ${dur}h cada uno), rotando entre las ${nF} farmacias seleccionadas.`;
+    }
+
+    modoInputs.forEach(input => input.addEventListener('change', () => { updateModoHelp(); updateEstimado(); }));
+    farmaciaCheckboxes.forEach(cb => cb.addEventListener('change', updateEstimado));
+    [fechaInicioInput, fechaFinInput, horaInicioInput, horaFinInput, duracionField].forEach(el => el?.addEventListener('input', updateEstimado));
     updateModoHelp();
+    updateEstimado();
   </script>
 </Layout>

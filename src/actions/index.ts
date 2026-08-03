@@ -385,6 +385,7 @@ export const server = {
       fechaInicio: z.string(),
       fechaFin: z.string(),
       horaInicio: z.string(),
+      horaFin: z.string().optional().default(''),
       duracionHoras: z.coerce.number().min(1).max(168),
       farmacias: z.array(z.coerce.number()).min(1),
       notas: z.string().nullable().optional(),
@@ -394,13 +395,14 @@ export const server = {
       const [fY, fM, fD] = input.fechaInicio.split('-').map(Number);
       const [hH, hM] = input.horaInicio.split(':').map(Number);
       const [tY, tM, tD] = input.fechaFin.split('-').map(Number);
+      const [fH, fM2] = (input.horaFin || '23:59').split(':').map(Number);
 
       const inicioBase = createUtcFromCaracas(fY, fM, fD, hH, hM);
-      const finLimite = createUtcFromCaracas(tY, tM, tD, 23, 59);
+      const finLimite = createUtcFromCaracas(tY, tM, tD, fH, fM2);
       const duracionMs = input.duracionHoras * 60 * 60 * 1000;
 
       if (inicioBase >= finLimite) {
-        throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha de fin debe ser posterior a la fecha de inicio' });
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha y hora de fin debe ser posterior a la de inicio' });
       }
 
       // Solo las farmacias activas seleccionadas entran en la rotación
@@ -416,79 +418,69 @@ export const server = {
         throw new ActionError({ code: 'BAD_REQUEST', message: 'Ninguna farmacia seleccionada está activa. Activá al menos una en Farmacias.' });
       }
 
-      const generados: { farmaciaId: number; inicio: string; fin: string }[] = [];
-      const omitidos: { inicio: string; razon: string }[] = [];
-
-      if (input.modo === 'simultaneo') {
-        // Modo simultáneo: todas las farmacias cubren el mismo rango completo
-        for (const farmaciaId of idsActivas) {
-          const inicioISO = toUtcISO(inicioBase);
-          const finISO = toUtcISO(finLimite);
-
-          // Verificar solapamiento solo para esta farmacia
-          const overlap = await db
-            .select({ id: turnos.id })
-            .from(turnos)
-            .where(and(
-              lt(turnos.inicio, finISO),
-              gt(turnos.fin, inicioISO),
-              eq(turnos.farmaciaId, farmaciaId)
-            ))
-            .limit(1);
-
-          if (overlap.length > 0) {
-            omitidos.push({ inicio: inicioISO, razon: 'Solapa con un turno existente' });
-          } else {
-            await db.insert(turnos).values({
-              farmaciaId,
-              inicio: inicioISO,
-              fin: finISO,
-              notas: input.notas || null,
-            });
-            generados.push({ farmaciaId, inicio: inicioISO, fin: finISO });
-          }
-        }
-      } else {
-        // Modo secuencial: cadena rotativa (comportamiento original)
-        let inicio = inicioBase;
-        let idx = 0;
-        let guard = 0;
-
-        while (inicio < finLimite && guard < 2000) {
-          const farmaciaId = idsActivas[idx % idsActivas.length];
-          const fin = new Date(inicio.getTime() + duracionMs);
-          const inicioISO = toUtcISO(inicio);
-          const finISO = toUtcISO(fin);
-
-          const overlap = await db
-            .select({ id: turnos.id })
-            .from(turnos)
-            .where(and(
-              lt(turnos.inicio, finISO),
-              gt(turnos.fin, inicioISO),
-              eq(turnos.farmaciaId, farmaciaId)
-            ))
-            .limit(1);
-
-          if (overlap.length > 0) {
-            omitidos.push({ inicio: inicioISO, razon: 'Solapa con un turno existente' });
-          } else {
-            await db.insert(turnos).values({
-              farmaciaId,
-              inicio: inicioISO,
-              fin: finISO,
-              notas: input.notas || null,
-            });
-            generados.push({ farmaciaId, inicio: inicioISO, fin: finISO });
-          }
-
-          inicio = fin;
-          idx++;
-          guard++;
+      // Validación temprana en modo secuencial: estimar turnos antes de insertar
+      if (input.modo === 'secuencial') {
+        const estimados = Math.ceil((finLimite.getTime() - inicioBase.getTime()) / duracionMs);
+        if (estimados > 2000) {
+          throw new ActionError({ code: 'BAD_REQUEST', message: `Esa configuración generaría ${estimados} turnos (máximo 2000). Aumentá la duración o acortá el rango.` });
         }
       }
 
-      return { ok: true, generados: generados.length, omitidos: omitidos.length, inactivas };
+      let generados = 0;
+      let omitidos = 0;
+
+      // Todo dentro de una transacción: si algo falla, no queda a medias
+      db.transaction((tx) => {
+        const insertar = (farmaciaId: number, inicioISO: string, finISO: string): boolean => {
+          const overlap = tx
+            .select({ id: turnos.id })
+            .from(turnos)
+            .where(and(
+              lt(turnos.inicio, finISO),
+              gt(turnos.fin, inicioISO),
+              eq(turnos.farmaciaId, farmaciaId)
+            ))
+            .limit(1)
+            .all();
+
+          if (overlap.length > 0) return false;
+
+          tx.insert(turnos).values({
+            farmaciaId,
+            inicio: inicioISO,
+            fin: finISO,
+            notas: input.notas || null,
+          }).run();
+          return true;
+        };
+
+        if (input.modo === 'simultaneo') {
+          // Modo simultáneo: todas las farmacias cubren el mismo rango completo
+          const inicioISO = toUtcISO(inicioBase);
+          const finISO = toUtcISO(finLimite);
+          for (const farmaciaId of idsActivas) {
+            if (insertar(farmaciaId, inicioISO, finISO)) generados++;
+            else omitidos++;
+          }
+        } else {
+          // Modo secuencial: cadena rotativa (comportamiento original)
+          let inicio = inicioBase;
+          let idx = 0;
+          let guard = 0;
+
+          while (inicio < finLimite && guard < 2000) {
+            const farmaciaId = idsActivas[idx % idsActivas.length];
+            const fin = new Date(inicio.getTime() + duracionMs);
+            if (insertar(farmaciaId, toUtcISO(inicio), toUtcISO(fin))) generados++;
+            else omitidos++;
+            inicio = fin;
+            idx++;
+            guard++;
+          }
+        }
+      });
+
+      return { ok: true, generados, omitidos, inactivas };
     },
   }),
 
