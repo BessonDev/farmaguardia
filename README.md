@@ -39,7 +39,7 @@
 | 🗓️ **Turno en vivo** | Landing SSR que muestra el turno vigente al instante |
 | 🗺️ **Mapa OpenStreetMap** | Ubicación exacta de la farmacia de turno (iframe por card) |
 | 🤖 **Bot Telegram** | `/turno`, `/farmacias`, `/ayuda` con webhook + secret token |
-| 📥 **Import CSV/Excel** | Carga masiva de farmacias y cronogramas, plantilla descargable |
+| 📥 **Import CSV/Excel** | Carga masiva con plantillas descargables, vista previa antes de importar |
 | 🔁 **Rotación automática** | Generación masiva de turnos secuencial o simultáneo con validación de solapamientos |
 | ⚡ **Override de emergencia** | Sustituir la farmacia de turno al instante desde el panel |
 | 🚨 **Reportes multi-usuario** | Reportar y confirmar con dedupe por huella + IP |
@@ -135,7 +135,8 @@ docker run -d \
 - 🏥 **Farmacias**: crear, editar, activar/desactivar, eliminar.
 - 🗓️ **Turnos**: crear, editar, eliminar y **generar rotaciones** (secuencial o simultáneo) con validación de solapamientos.
 - ⚡ **Override de emergencia**: sustituir la farmacia de turno actual por un respaldo al instante.
-- 📥 **Importar CSV/Excel**: carga masiva de farmacias o cronogramas con plantilla descargable y opción de sobrescribir.
+- 📥 **Importar CSV/Excel**: carga masiva de farmacias o cronogramas con plantilla descargable, vista previa en el modal, botón para limpiar la selección y opción de sobrescribir.
+- 📢 **Feedback en modales**: los reportes de importación y acciones se muestran en un modal de confirmación/error en vez de alert del navegador.
 - 🕘 **Historial**: turnos pasados y futuros paginado con filtros.
 - 📊 **Analytics**: visitas y reportes del día/mes.
 - 🤖 **Test de Telegram**: botón para enviar un mensaje de prueba al chat del admin.
