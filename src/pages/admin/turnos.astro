@@ -325,6 +325,16 @@ function esHoy(iso: string): boolean {
           required
           class="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:px-4 file:py-2 file:border-0 file:rounded-lg file:bg-primary file:text-white file:text-sm file:font-medium hover:file:bg-primary-dark"
         />
+        <button
+          type="button"
+          id="limpiar-archivo-turnos"
+          class="hidden mt-2 inline-flex items-center gap-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-xs font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Limpiar seleccionado
+        </button>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Columnas: farmacia, fecha (AAAA-MM-DD), hora_inicio (HH:MM), hora_fin (HH:MM), notas (opcional)</p>
       </div>
 
@@ -400,6 +410,7 @@ function esHoy(iso: string): boolean {
 
   <script>
     const archivoTurnosInput = document.getElementById('archivo-turnos');
+    const limpiarArchivoTurnos = document.getElementById('limpiar-archivo-turnos');
     const previewContainer = document.getElementById('preview-container');
     const previewHeader = document.getElementById('preview-header');
     const previewBody = document.getElementById('preview-body');
@@ -450,9 +461,21 @@ function esHoy(iso: string): boolean {
       previewContainer.classList.remove('hidden');
     }
 
+    function limpiarSeleccionTurnos() {
+      archivoTurnosInput.value = '';
+      previewContainer.classList.add('hidden');
+      limpiarArchivoTurnos.classList.add('hidden');
+      archivoTurnosInput.focus();
+    }
+    limpiarArchivoTurnos.addEventListener('click', limpiarSeleccionTurnos);
+
     archivoTurnosInput.addEventListener('change', async () => {
       const file = archivoTurnosInput.files && archivoTurnosInput.files[0];
-      if (!file) return;
+      if (!file) {
+        limpiarArchivoTurnos.classList.add('hidden');
+        return;
+      }
+      limpiarArchivoTurnos.classList.remove('hidden');
       try {
         const esXlsx = /\.xlsx$/i.test(file.name);
         const rows = esXlsx
