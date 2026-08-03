@@ -344,8 +344,8 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
     }
 
     async function leerXlsx(file) {
-      const readXlsxFile = (await import('read-excel-file/browser')).default;
-      const rows = await readXlsxFile(file);
+      const { readSheet } = await import('read-excel-file/browser');
+      const rows = await readSheet(file);
       return rows.map(r => r.map(c => c instanceof Date ? c.toLocaleDateString('es-VE') : (c == null ? '' : String(c))));
     }
 

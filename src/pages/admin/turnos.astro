@@ -333,6 +333,20 @@ function esHoy(iso: string): boolean {
         Sobre-escribir turnos existentes (mismo rango de inicio)
       </label>
 
+      <!-- Preview en cliente -->
+      <div id="preview-container" class="hidden mb-4">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-sm">Vista previa</h3>
+        <div class="overflow-x-auto border border-gray-200 dark:border-gray-800 rounded-lg">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800/50">
+              <tr id="preview-header" class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide"></tr>
+            </thead>
+            <tbody id="preview-body" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+          </table>
+        </div>
+        <p id="preview-count" class="text-xs text-gray-500 dark:text-gray-400 mt-2"></p>
+      </div>
+
       <div class="flex items-center gap-3 pt-2">
         <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">
           Importar turnos
@@ -382,5 +396,72 @@ function esHoy(iso: string): boolean {
     document.querySelectorAll('[data-open-nuevo]').forEach(btn => btn.addEventListener('click', openNuevo));
     document.querySelectorAll('[data-editar]').forEach(btn => btn.addEventListener('click', () => openEditar(Number(btn.dataset.editar))));
     document.querySelectorAll('[data-open-importar]').forEach(btn => btn.addEventListener('click', () => window.FarmaGuardiaAdmin.openModal('modal-importar')));
+  </script>
+
+  <script>
+    const archivoTurnosInput = document.getElementById('archivo-turnos');
+    const previewContainer = document.getElementById('preview-container');
+    const previewHeader = document.getElementById('preview-header');
+    const previewBody = document.getElementById('preview-body');
+    const previewCount = document.getElementById('preview-count');
+
+    function parseCsvTurnos(text) {
+      const rows = [];
+      let row = [];
+      let field = '';
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (inQuotes) {
+          if (char === '"') {
+            if (text[i + 1] === '"') { field += '"'; i++; }
+            else inQuotes = false;
+          } else field += char;
+        } else if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          row.push(field); field = '';
+        } else if (char === '\n' || char === '\r') {
+          row.push(field); field = '';
+          rows.push(row); row = [];
+          if (char === '\r' && text[i + 1] === '\n') i++;
+        } else {
+          field += char;
+        }
+      }
+      if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+      return rows.map(r => r.map(c => c.trim())).filter(r => r.some(c => c !== ''));
+    }
+
+    async function leerXlsxTurnos(file) {
+      const { readSheet } = await import('read-excel-file/browser');
+      const rows = await readSheet(file);
+      return rows.map(r => r.map(c => c instanceof Date ? c.toLocaleDateString('es-VE') : (c == null ? '' : String(c))));
+    }
+
+    function mostrarPreviewTurnos(rows) {
+      if (rows.length < 2) {
+        previewContainer.classList.add('hidden');
+        return;
+      }
+      previewHeader.innerHTML = rows[0].map(c => `<th class="px-3 py-2 font-medium">${c}</th>`).join('');
+      previewBody.innerHTML = rows.slice(1, 11).map(r => `<tr>${r.map(c => `<td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap max-w-[180px] truncate">${c}</td>`).join('')}</tr>`).join('');
+      previewCount.textContent = `${rows.length - 1} filas en el archivo${rows.length > 11 ? ' (mostrando las primeras 10)' : ''}.`;
+      previewContainer.classList.remove('hidden');
+    }
+
+    archivoTurnosInput.addEventListener('change', async () => {
+      const file = archivoTurnosInput.files && archivoTurnosInput.files[0];
+      if (!file) return;
+      try {
+        const esXlsx = /\.xlsx$/i.test(file.name);
+        const rows = esXlsx
+          ? await leerXlsxTurnos(file)
+          : parseCsvTurnos(await file.text());
+        mostrarPreviewTurnos(rows);
+      } catch {
+        previewContainer.classList.add('hidden');
+      }
+    });
   </script>
 </Layout>

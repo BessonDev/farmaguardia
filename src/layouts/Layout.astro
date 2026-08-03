@@ -137,6 +137,21 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       </div>
     </div>
 
+    <!-- Modal de feedback (éxito/error) -->
+    <div id="feedback-modal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
+      <div class="fixed inset-0 bg-black/50" aria-hidden="true"></div>
+      <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 text-center">
+          <div id="feedback-icon" class="mx-auto mb-4 flex items-center justify-center w-14 h-14 rounded-full"></div>
+          <h2 id="feedback-modal-title" class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2"></h2>
+          <p id="feedback-message" class="text-sm text-gray-600 dark:text-gray-300 mb-6"></p>
+          <button type="button" id="feedback-close" class="w-full px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-colors focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900">
+            Aceptar
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script is:inline>
       // Theme toggle
       const themeToggle = document.getElementById('theme-toggle');
@@ -175,6 +190,58 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
       const reportForm = document.getElementById('report-form');
       const reportFarmaciaId = document.getElementById('report-farmacia-id');
       const reportTurnoId = document.getElementById('report-turno-id');
+
+      // Feedback modal (reemplaza alert())
+      const feedbackModal = document.getElementById('feedback-modal');
+      const feedbackIcon = document.getElementById('feedback-icon');
+      const feedbackTitle = document.getElementById('feedback-modal-title');
+      const feedbackMessage = document.getElementById('feedback-message');
+      const feedbackClose = document.getElementById('feedback-close');
+
+      let feedbackOnClose = null;
+
+      function showFeedback({ tipo, titulo, mensaje, onClose }) {
+        if (!feedbackModal) return;
+        feedbackOnClose = onClose || null;
+        const success = tipo !== 'error';
+        const color = success ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30';
+        const iconColor = success ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
+        const svg = success
+          ? '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>'
+          : '<svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.024-.833-2.794 0L5.19 18.5c-.77.833.192 2.5 1.732 2.5z" /></svg>';
+        if (feedbackIcon) {
+          feedbackIcon.className = `mx-auto mb-4 flex items-center justify-center w-14 h-14 rounded-full ${color} ${iconColor}`;
+          feedbackIcon.innerHTML = svg;
+        }
+        if (feedbackTitle) feedbackTitle.textContent = titulo;
+        if (feedbackMessage) feedbackMessage.textContent = mensaje;
+        feedbackModal.classList.remove('hidden');
+        feedbackModal.classList.add('flex');
+      }
+
+      function closeFeedbackModal() {
+        if (feedbackModal) {
+          feedbackModal.classList.add('hidden');
+          feedbackModal.classList.remove('flex');
+          const cb = feedbackOnClose;
+          feedbackOnClose = null;
+          if (typeof cb === 'function') cb();
+        }
+      }
+
+      if (feedbackClose) {
+        feedbackClose.addEventListener('click', closeFeedbackModal);
+      }
+      if (feedbackModal) {
+        feedbackModal.addEventListener('click', (e) => {
+          if (e.target === feedbackModal) closeFeedbackModal();
+        });
+      }
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && feedbackModal && !feedbackModal.classList.contains('hidden')) {
+          closeFeedbackModal();
+        }
+      });
 
       function openReportModal(farmaciaId, turnoId) {
         if (reportModal) {
@@ -222,16 +289,28 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
             });
             const data = await res.json();
             if (data.ok) {
-              alert(data.confirmado
-                ? '¡Gracias! Tu confirmación fue registrada.'
-                : '¡Gracias! Tu reporte ha sido enviado.');
               closeReportModal();
-              window.location.reload();
+              showFeedback({
+                tipo: 'success',
+                titulo: data.confirmado ? '¡Confirmación registrada!' : '¡Reporte enviado!',
+                mensaje: data.confirmado
+                  ? 'Gracias por confirmar. Tu reporte ayuda a mantener la información actualizada.'
+                  : 'Gracias por tu reporte. Lo revisaremos para mantener la información actualizada.',
+                onClose: () => window.location.reload(),
+              });
             } else {
-              alert('Error: ' + (data.error || 'No se pudo enviar el reporte'));
+              showFeedback({
+                tipo: 'error',
+                titulo: 'No se pudo enviar',
+                mensaje: data.error || 'Ocurrió un error al enviar el reporte.',
+              });
             }
           } catch {
-            alert('Error de conexión. Intenta de nuevo.');
+            showFeedback({
+              tipo: 'error',
+              titulo: 'Error de conexión',
+              mensaje: 'No se pudo conectar con el servidor. Intenta de nuevo.',
+            });
           } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
@@ -248,15 +327,27 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
           });
           const data = await res.json();
           if (data.ok) {
-            alert(data.yaConfirmado
-              ? 'Ya habías confirmado este reporte. ¡Gracias!'
-              : `Confirmación registrada. ${data.confirmaciones} ${data.confirmaciones === 1 ? 'persona' : 'personas'} lo reportaron.`);
-            window.location.reload();
+            showFeedback({
+              tipo: 'success',
+              titulo: data.yaConfirmado ? '¡Ya habías confirmado!' : '¡Confirmación registrada!',
+              mensaje: data.yaConfirmado
+                ? 'Gracias por tu apoyo.'
+                : `${data.confirmaciones} ${data.confirmaciones === 1 ? 'persona' : 'personas'} lo reportaron.`,
+              onClose: () => window.location.reload(),
+            });
           } else {
-            alert('Error: ' + (data.error || 'No se pudo confirmar'));
+            showFeedback({
+              tipo: 'error',
+              titulo: 'No se pudo confirmar',
+              mensaje: data.error || 'Ocurrió un error al confirmar.',
+            });
           }
         } catch {
-          alert('Error de conexión. Intenta de nuevo.');
+          showFeedback({
+            tipo: 'error',
+            titulo: 'Error de conexión',
+            mensaje: 'No se pudo conectar con el servidor. Intenta de nuevo.',
+          });
         }
       }
 
