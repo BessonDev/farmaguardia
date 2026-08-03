@@ -117,34 +117,37 @@ src/
 
 ---
 
-## 4. MVP — Fase 1: "Abierto ahora, ya"
+## 4. MVP — Fase 1: "Abierto ahora, ya" ✅
 
-### Landing Pública (`/`)
-- **Turno actual:** Card con badge animado "ABIERTO AHORA" (pulse verde), nombre, dirección, botones:
+### Landing Pública (`/`) ✅
+- [x] **Turno actual:** Card con badge animado "ABIERTO AHORA" (pulse verde), nombre, dirección, botones:
   - Llamar → `href="tel:+58..."`
   - WhatsApp → `href="https://wa.me/58...?text=..."`
   - Cómo llegar → `https://www.google.com/maps/search/?api=1&query={lat},{lon}`
-- **Próximos turnos:** Lista 7 días (fecha, farmacia, hora inicio/fin).
-- **Fallback sin turno:** Mensaje claro + números de emergencia locales.
-- **Modo oscuro:** `prefers-color-scheme` + `localStorage`, sin flash (script inline en `<head>`).
-- **Reporte comunitario:** Botón "¿Esta farmacia no estaba abierta?" → modal → POST `/api/reportes` → guarda en DB + envía a Telegram.
+- [x] **Próximos turnos:** Lista 7 días (fecha, farmacia, hora inicio/fin).
+- [x] **Fallback sin turno:** Mensaje claro + números de emergencia locales.
+- [x] **Modo oscuro:** `prefers-color-scheme` + `localStorage`, sin flash (script inline en `<head>`).
+- [x] **Reporte comunitario:** Botón "¿Esta farmacia no estaba abierta?" → modal → POST `/api/reportes` → guarda en DB + envía a Telegram.
 
-### Panel Admin (`/admin/*`)
-- **Login:** Formulario contraseña → valida contra `ADMIN_PASSWORD` → cookie sesión 24h.
-- **Dashboard:** Resumen turno actual + accesos rápidos.
-- **CRUD Farmacias:** Nombre, dirección, sector, coords GPS, teléfono, WhatsApp, imagen, delivery, activa/inactiva.
-- **CRUD Turnos:**
+### Panel Admin (`/admin/*`) ✅
+- [x] **Login:** Formulario contraseña → valida contra `ADMIN_PASSWORD` → cookie sesión 24h.
+- [x] **Dashboard:** Resumen turno actual + accesos rápidos.
+- [x] **CRUD Farmacias:** Nombre, dirección, sector, coords GPS, teléfono, WhatsApp, imagen, delivery, activa/inactiva.
+- [x] **CRUD Turnos:**
   - Selector farmacia + date-picker rango (inicio/fin) en hora Caracas.
   - Validación de solapamiento.
   - **Override "Cambiar turno de hoy":** botón rápido para sustituir farmacia actual por respaldo (crea turno override con prioridad).
 
-### Seed de Prueba
-- 12 farmacias de `FARMACIAS.md` (geocodificar las 5 sin coords con aproximación al centro/sector).
-- 2 semanas de turnos ficticios rotativos (reemplazable desde el panel).
+### Seed de Prueba ✅
+- [x] 12 farmacias de `FARMACIAS.md` geocodificadas (coords asignadas en `scripts/seed.ts`).
+- [x] 2 semanas de turnos ficticios rotativos (reemplazable desde el panel).
+- [x] Plantilla de importación `scripts/farmacias.csv` para carga manual en panel (Opción A elegida para prod).
 
-### Despliegue
-- VPS con Node.js, proceso gestionado por pm2 o Dokploy.
-- Backup diario del archivo `.db` (cron + `sqlite3 .backup`).
+### Despliegue ✅
+- [x] VPS con Node.js gestionado por Dokploy.
+- [x] Migraciones automáticas en arranque (`scripts/migrate.mjs` idempotente).
+- [x] `SITE_URL` como build arg (canonical/og:url correctos en build time).
+- [ ] Backup diario del archivo `.db` (solo documentado en README, falta automatizar cron).
 
 ---
 
@@ -198,17 +201,22 @@ src/
 
 ---
 
-## 8. Próximos Pasos Inmediatos
+## 8. Pendientes Reales
 
-1. Inicializar proyecto Astro SSR + Tailwind + Drizzle + better-sqlite3.
-2. Crear esquema Drizzle + migración inicial.
-3. Script de seed con 12 farmacias + 2 semanas de turnos prueba.
-4. Implementar utilidades `time.ts` (UTC ↔ Caracas, formato ISO).
-5. Landing SSR: query turno actual + card + próximos.
-6. Modal reporte + endpoint + integración Telegram.
-7. Admin login + sesión + CRUD farmacias.
-8. CRUD turnos + validación solapamiento + override.
-9. Despliegue VPS + backup.
+### Producción (inmediatos)
+- [ ] Cargar datos en la DB de prod: importar `scripts/farmacias.csv` desde el panel (Opción A elegida) y generar turnos desde `/admin/rotacion`.
+- [ ] Reinstalar la PWA / hard refresh en los clientes para limpiar el favicon stale de Astro (el escudo correcto ya se sirve en prod).
+- [ ] Números de emergencia reales en la landing (hoy hay placeholders en `src/pages/index.astro`).
+- [ ] Definir `ADMIN_PASSWORD` real de producción (hoy usa valor de prueba).
+
+### Fiabilidad
+- [ ] Backup diario automatizado de la DB (cron + `sqlite3 .backup`). Solo documentado en README.
+
+### Fase 4 — Escala (cuando haga falta)
+- [ ] Multi-ciudad (mismo schema, agregar `ciudad_id`).
+- [ ] Notificaciones push (turno próximo, cambios).
+- [ ] API pública documentada.
+- [ ] Migración a PostgreSQL si el volumen lo exige.
 
 ---
 
