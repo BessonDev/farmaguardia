@@ -70,22 +70,69 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <!-- JSON-LD LocalBusiness para SEO -->
     <script type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
-      "@type": "LocalBusiness",
+      "@type": ["LocalBusiness", "Service"],
       "name": "FarmaGuardia",
       "description": "Portal de farmacias de turno en Puerto Ayacucho",
       "url": Astro.site?.toString(),
+      "serviceType": "Información de farmacias de guardia y turno",
+      "areaServed": {
+        "@type": "Place",
+        "name": "Puerto Ayacucho, Amazonas, Venezuela",
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 5.6667,
+          "longitude": -67.6333
+        }
+      },
       "address": {
         "@type": "PostalAddress",
         "addressLocality": "Puerto Ayacucho",
         "addressRegion": "Amazonas",
         "addressCountry": "VE"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 5.6667,
-        "longitude": -67.6333
       }
     }, null, 2)} />
+    
+    <!-- FAQ Schema para AEO -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "¿Cómo sé qué farmacia está de turno ahora?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "En la parte superior de esta página se muestra la farmacia de turno actual con su dirección, teléfono y horario de vigencia. La información se actualiza en tiempo real."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Cómo reportar una farmacia de turno que no atendió?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Haciendo clic en el botón 'Reportar problema' en la tarjeta de la farmacia de turno, seleccionando el tipo de problema y enviando el reporte. Puede agregar detalles opcionales."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Qué significa que una farmacia tenga turno de 24 horas?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Un turno de 24 horas significa que la farmacia está abierta y atendiendo durante todo el día y noche, típicamente desde las 08:00 de un día hasta las 08:00 del día siguiente."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "¿Puedo confiar en la información mostrada aquí?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sí. Los datos provienen directamente del sistema oficial de turnos de farmacias de Puerto Ayacucho y se actualizan inmediatamente cuando hay cambios. Además, los usuarios pueden reportar discrepancias para mantener la precisión."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body class="h-full flex flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-50">
     <!-- Aviso offline: datos guardados en caché -->

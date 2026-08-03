@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
+import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
 export default defineConfig({
@@ -13,7 +14,7 @@ export default defineConfig({
   // La sesión admin ya está protegida por cookie SameSite=Lax + middleware
   // que verifica la sesión en cada ruta/acción /admin.
   security: { checkOrigin: false },
-  integrations: [],
+  integrations: [sitemap()],
   vite: {
     css: {
       postcss: './postcss.config.mjs',
