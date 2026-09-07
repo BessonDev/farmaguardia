@@ -80,6 +80,11 @@ function mapsUrl(farmacia: Props['turnos'][number]['farmacia']) {
                     Delivery
                   </span>
                 )}
+                {turno.farmacia.regente && (
+                  <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full shrink-0">
+                    Regente
+                  </span>
+                )}
               </div>
               <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
                 {formatCaracasDate(new Date(turno.inicio))} · {formatCaracasTime(new Date(turno.inicio))} – {formatCaracasTime(new Date(turno.fin))}

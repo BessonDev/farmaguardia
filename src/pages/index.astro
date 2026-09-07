@@ -32,6 +32,7 @@ const turnosActivos = await db
       imagenUrl: farmacias.imagenUrl,
       sector: farmacias.sector,
       delivery: farmacias.delivery,
+      regente: farmacias.regente,
     },
   })
   .from(turnos)
@@ -88,6 +89,7 @@ const proximosTurnosResult = await db
       imagenUrl: farmacias.imagenUrl,
       sector: farmacias.sector,
       delivery: farmacias.delivery,
+      regente: farmacias.regente,
     },
   })
   .from(turnos)

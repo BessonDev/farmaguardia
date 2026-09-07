@@ -114,6 +114,7 @@ export const server = {
       latitud: z.string().nullable().optional(),
       longitud: z.string().nullable().optional(),
       delivery: z.string().optional(),
+      regente: z.string().optional(),
       activa: z.string().optional(),
     }),
     handler: async (input) => {
@@ -127,6 +128,7 @@ export const server = {
         latitud: input.latitud ? Number(input.latitud) : null,
         longitud: input.longitud ? Number(input.longitud) : null,
         delivery: input.delivery === 'on',
+        regente: input.regente === 'on',
         activa: input.activa === 'on',
       });
       return { ok: true };
@@ -146,6 +148,7 @@ export const server = {
       latitud: z.string().nullable().optional(),
       longitud: z.string().nullable().optional(),
       delivery: z.string().optional(),
+      regente: z.string().optional(),
       activa: z.string().optional(),
     }),
     handler: async (input) => {
@@ -159,6 +162,7 @@ export const server = {
         latitud: input.latitud ? Number(input.latitud) : null,
         longitud: input.longitud ? Number(input.longitud) : null,
         delivery: input.delivery === 'on',
+        regente: input.regente === 'on',
         activa: input.activa === 'on',
       }).where(eq(farmacias.id, input.id));
       return { ok: true };
@@ -213,6 +217,7 @@ export const server = {
         latitud: header.indexOf('latitud'),
         longitud: header.indexOf('longitud'),
         delivery: header.indexOf('delivery'),
+        regente: header.indexOf('regente'),
         activa: header.indexOf('activa'),
       };
 
@@ -251,6 +256,7 @@ export const server = {
           latitud: col.latitud >= 0 && f[col.latitud] != null && String(f[col.latitud]) !== '' ? Number(f[col.latitud]) : null,
           longitud: col.longitud >= 0 && f[col.longitud] != null && String(f[col.longitud]) !== '' ? Number(f[col.longitud]) : null,
           delivery: col.delivery >= 0 ? normalizarBooleano(f[col.delivery], false) : false,
+          regente: col.regente >= 0 ? normalizarBooleano(f[col.regente], false) : false,
           activa: col.activa >= 0 ? normalizarBooleano(f[col.activa], true) : true,
         };
 

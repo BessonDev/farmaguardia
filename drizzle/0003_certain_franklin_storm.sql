@@ -1,0 +1,1 @@
+ALTER TABLE `farmacias` ADD `regente` integer DEFAULT false;

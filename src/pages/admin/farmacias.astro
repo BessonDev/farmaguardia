@@ -190,6 +190,10 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
           Delivery disponible
         </label>
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" name="regente" id="f-regente" class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
+          Regente
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           <input type="checkbox" name="activa" id="f-activa" checked class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
           Activa
         </label>
@@ -281,6 +285,7 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
       latitud: document.getElementById('f-latitud'),
       longitud: document.getElementById('f-longitud'),
       delivery: document.getElementById('f-delivery'),
+      regente: document.getElementById('f-regente'),
       activa: document.getElementById('f-activa'),
     };
 
@@ -308,6 +313,7 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
       f.latitud.value = data.latitud ?? '';
       f.longitud.value = data.longitud ?? '';
       f.delivery.checked = !!data.delivery;
+      f.regente.checked = !!data.regente;
       f.activa.checked = !!data.activa;
       if (modalTitle) modalTitle.textContent = `Editar: ${data.nombre}`;
       window.FarmaGuardiaAdmin.openModal('modal-farmacia');
