@@ -22,6 +22,13 @@
       "when": 1785635021206,
       "tag": "0002_fuzzy_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788806895666,
+      "tag": "0003_certain_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

@@ -24,10 +24,10 @@
 
 **FarmaGuardia** es un sistema web para la comunidad de **Puerto Ayacucho, Estado Amazonas (Venezuela)** que resuelve una necesidad real: saber **qué farmacia está de turno ahora mismo**, sin llamar a todas.
 
-- 🌐 **Landing pública**: turno activo, mapa OSM con la farmacia, teléfono y WhatsApp.
+- 🌐 **Landing pública**: turno activo, mapa OSM con la farmacia, teléfono, WhatsApp y badges de **Regente** y **Delivery**.
 - 🤖 **Bot de Telegram**: consulta `/turno` y `/farmacias` desde el chat del bot, con webhook HTTPS + secret token.
-- 📢 **Reportes comunitarios**: si la farmacia está cerrada o los datos son incorrectos, cualquiera lo reporta y otros lo confirman (dedupe por huella local + IP).
-- 🛠️ **Panel admin**: CRUD de farmacias y turnos, generador de rotaciones (secuencial/simultáneo), override de emergencia, importación CSV/Excel, historial paginado y analytics.
+- 📢 **Reportes comunitarios**: si la farmacia está cerrada o los datos son incorrectos, cualquiera lo reporta y otros lo confirman (dedupe por huella local + IP). Los admins pueden **resolver** o **eliminar** reportes desde el panel.
+- 🛠️ **Panel admin**: CRUD de farmacias y turnos, generador de rotaciones (secuencial/simultáneo), override de emergencia con **eliminación directa de turnos activos**, importación CSV/Excel, historial paginado, **gestión de reportes** y analytics.
 - 📱 **PWA**: instalable y con modo offline (Service Worker + manifest) y aviso "Datos de HH:MM".
 
 ---
@@ -38,11 +38,13 @@
 |---|---|
 | 🗓️ **Turno en vivo** | Landing SSR que muestra el turno vigente al instante |
 | 🗺️ **Mapa OpenStreetMap** | Ubicación exacta de la farmacia de turno (iframe por card) |
+| 🏷️ **Badges Regente/Delivery** | Indicadores visuales en cards de turno activo y lista de próximos |
 | 🤖 **Bot Telegram** | `/turno`, `/farmacias`, `/ayuda` con webhook + secret token |
 | 📥 **Import CSV/Excel** | Carga masiva con plantillas descargables, vista previa antes de importar |
 | 🔁 **Rotación automática** | Generación masiva de turnos secuencial o simultáneo con validación de solapamientos |
-| ⚡ **Override de emergencia** | Sustituir la farmacia de turno al instante desde el panel |
+| ⚡ **Override de emergencia** | Sustituir o **eliminar** la farmacia de turno al instante desde el panel |
 | 🚨 **Reportes multi-usuario** | Reportar y confirmar con dedupe por huella + IP |
+| 🛠️ **Gestión de reportes** | Filtrar, resolver y eliminar reportes desde el panel admin |
 | 📊 **Analytics** | Visitas, reportes y su evolución en el panel |
 | 📱 **PWA offline** | Service Worker con aviso de datos cacheados |
 | 🔒 **Auth simple** | Sesión con cookie httpOnly + SameSite=Lax + Secure (prod) |
@@ -132,11 +134,11 @@ docker run -d \
 
 `/admin` da acceso a:
 
-- 🏥 **Farmacias**: crear, editar, activar/desactivar, eliminar.
+- 🏥 **Farmacias**: crear, editar, activar/desactivar, eliminar, marcar como **Regente** y **Delivery**.
 - 🗓️ **Turnos**: crear, editar, eliminar y **generar rotaciones** (secuencial o simultáneo) con validación de solapamientos.
-- ⚡ **Override de emergencia**: sustituir la farmacia de turno actual por un respaldo al instante.
+- ⚡ **Override de emergencia**: sustituir o **eliminar directamente** la farmacia de turno actual por un respaldo al instante.
 - 📥 **Importar CSV/Excel**: carga masiva de farmacias o cronogramas con plantilla descargable, vista previa en el modal, botón para limpiar la selección y opción de sobrescribir.
-- 📢 **Feedback en modales**: los reportes de importación y acciones se muestran en un modal de confirmación/error en vez de alert del navegador.
+- 📢 **Gestión de reportes**: filtrar por estado, tipo y farmacia; marcar como resuelto o eliminar reportes.
 - 🕘 **Historial**: turnos pasados y futuros paginado con filtros.
 - 📊 **Analytics**: visitas y reportes del día/mes.
 - 🤖 **Test de Telegram**: botón para enviar un mensaje de prueba al chat del admin.
@@ -150,7 +152,7 @@ src/
 ├── pages/
 │   ├── index.astro                # Landing pública (SSR)
 │   ├── api/                       # Endpoints (turno.json, reportes, visita, telegram/webhook)
-│   └── admin/                     # Panel admin (login, dashboard, farmacias, turnos, rotacion, historial)
+│   └── admin/                     # Panel admin (login, dashboard, farmacias, turnos, rotacion, historial, reportes)
 ├── components/                    # Cards, sidebar, modales, listas
 ├── layouts/                       # Layout principal + modal de reporte
 ├── actions/                       # Astro Actions (auth, CRUDs, rotación, import, test Telegram)
