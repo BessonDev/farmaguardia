@@ -2,7 +2,7 @@ import { defineAction, ActionError } from 'astro:actions';
 import { z } from 'astro/zod';
 import { timingSafeEqual as nodeTimingSafeEqual, randomBytes } from 'node:crypto';
 import { db } from '../db';
-import { farmacias, turnos } from '../db/schema';
+import { farmacias, turnos, reportes } from '../db/schema';
 import { eq, and, gt, gte, lt, lte, sql, inArray } from 'drizzle-orm';
 import { parseCaracasDateTimeLocal, toUtcISO, nowUtc, createUtcFromCaracas } from '../utils/time';
 import { sendReportToTelegram, testTelegramConnection, isTelegramConfigured } from '../utils/telegram';
