@@ -54,10 +54,11 @@ const reportesActivos = turnosActivosIds.length > 0
         tipo: reportes.tipo,
         detalle: reportes.detalle,
         confirmaciones: reportes.confirmaciones,
+        resuelto: reportes.resuelto,
         createdAt: reportes.createdAt,
       })
       .from(reportes)
-      .where(inArray(reportes.turnoId, turnosActivosIds))
+      .where(and(inArray(reportes.turnoId, turnosActivosIds), eq(reportes.resuelto, false)))
       .orderBy(reportes.confirmaciones)
   : [];
 const reportesPorTurno = new Map<number, typeof reportesActivos[number]>();
