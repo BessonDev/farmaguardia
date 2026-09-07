@@ -587,6 +587,24 @@ export const server = {
     },
   }),
 
+  resolverReporte: defineAction({
+    accept: 'form',
+    input: z.object({ id: z.coerce.number() }),
+    handler: async (input) => {
+      await db.update(reportes).set({ resuelto: true }).where(eq(reportes.id, input.id));
+      return { ok: true };
+    },
+  }),
+
+  eliminarReporte: defineAction({
+    accept: 'form',
+    input: z.object({ id: z.coerce.number() }),
+    handler: async (input) => {
+      await db.delete(reportes).where(eq(reportes.id, input.id));
+      return { ok: true };
+    },
+  }),
+
   // ─── Importar turnos (Excel/CSV) ───
   importarTurnos: defineAction({
     accept: 'form',

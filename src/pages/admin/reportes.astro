@@ -1,0 +1,324 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AdminSidebar from '../../components/AdminSidebar.astro';
+import { actions } from 'astro:actions';
+import { db } from '../../db';
+import { farmacias, reportes, turnos } from '../../db/schema';
+import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
+import { createUtcFromCaracas, toUtcISO, formatCaracasDateTime } from '../../utils/time';
+
+const PAGE_SIZE = 50;
+const url = new URL(Astro.url);
+
+// Filtros desde query params
+const fEstado = url.searchParams.get('estado') || 'activos'; // activos | resueltos | todos
+const fTipo = url.searchParams.get('tipo') || '';
+const fFarmacia = url.searchParams.get('farmacia') || '';
+const pagina = Math.max(1, Number(url.searchParams.get('pagina')) || 1);
+
+// Acción del admin
+const resultResolver = Astro.getActionResult(actions.resolverReporte);
+const resultEliminar = Astro.getActionResult(actions.eliminarReporte);
+
+// Construir condiciones de filtro
+const condiciones = [];
+
+if (fEstado === 'activos') {
+  condiciones.push(eq(reportes.resuelto, false));
+} else if (fEstado === 'resueltos') {
+  condiciones.push(eq(reportes.resuelto, true));
+}
+
+if (fTipo) {
+  condiciones.push(eq(reportes.tipo, fTipo));
+}
+
+if (fFarmacia) {
+  condiciones.push(eq(reportes.farmaciaId, Number(fFarmacia)));
+}
+
+const where = condiciones.length > 0 ? and(...condiciones) : undefined;
+
+// Total de reportes con filtro
+const totalResult = await db
+  .select({ count: sql`count(*)` })
+  .from(reportes)
+  .where(where);
+const totalReportes = Number(totalResult[0].count);
+const totalPaginas = Math.max(1, Math.ceil(totalReportes / PAGE_SIZE));
+const paginaActual = Math.min(pagina, totalPaginas);
+const offset = (paginaActual - 1) * PAGE_SIZE;
+
+// Reportes paginados
+const listaReportes = await db
+  .select({
+    id: reportes.id,
+    tipo: reportes.tipo,
+    detalle: reportes.detalle,
+    confirmaciones: reportes.confirmaciones,
+    resuelto: reportes.resuelto,
+    createdAt: reportes.createdAt,
+    farmaciaId: reportes.farmaciaId,
+    turnoId: reportes.turnoId,
+    nombreFarmacia: farmacias.nombre,
+    inicioTurno: turnos.inicio,
+    finTurno: turnos.fin,
+  })
+  .from(reportes)
+  .leftJoin(farmacias, eq(reportes.farmaciaId, farmacias.id))
+  .leftJoin(turnos, eq(reportes.turnoId, turnos.id))
+  .where(where)
+  .orderBy(desc(reportes.createdAt))
+  .limit(PAGE_SIZE)
+  .offset(offset);
+
+const todasFarmacias = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
+
+// Contadores para estadísticas
+const [totalActivos] = await db.select({ count: sql`count(*)` }).from(reportes).where(eq(reportes.resuelto, false));
+const [totalResueltos] = await db.select({ count: sql`count(*)` }).from(reportes).where(eq(reportes.resuelto, true));
+
+function pageUrl(params: Record<string, string>): string {
+  const p = new URLSearchParams();
+  if (fEstado !== 'activos') p.set('estado', fEstado);
+  if (fTipo) p.set('tipo', fTipo);
+  if (fFarmacia) p.set('farmacia', fFarmacia);
+  for (const [k, v] of Object.entries(params)) p.set(k, v);
+  const qs = p.toString();
+  return qs ? `/admin/reportes?${qs}` : '/admin/reportes';
+}
+
+const tipoLabel: Record<string, string> = {
+  cerrada: 'Cerrada',
+  datos_incorrectos: 'Datos incorrectos',
+  otro: 'Otro',
+};
+
+const tipoColor: Record<string, string> = {
+  cerrada: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+  datos_incorrectos: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+  otro: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400',
+};
+---
+
+<Layout title="Reportes - FarmaGuardia Admin" hideFooter>
+  <div class="min-h-full flex">
+    <AdminSidebar active="reportes" />
+
+    <div class="flex-1 flex flex-col min-w-0">
+      <div class="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+        <span class="font-bold text-gray-900 dark:text-gray-100">Reportes</span>
+        <div class="flex gap-2">
+          <a href="/admin" class="text-sm text-primary">Dashboard</a>
+          <a href="/admin/turnos" class="text-sm text-primary">Turnos</a>
+        </div>
+      </div>
+
+      <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Reportes Comunitarios</h1>
+        </div>
+
+        {resultResolver?.data?.ok && (
+          <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">
+            Reporte marcado como resuelto.
+          </div>
+        )}
+
+        {resultEliminar?.data?.ok && (
+          <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">
+            Reporte eliminado.
+          </div>
+        )}
+
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Activos</p>
+            <p class="text-2xl font-bold text-red-600 dark:text-red-400">{Number(totalActivos.count)}</p>
+          </div>
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Resueltos</p>
+            <p class="text-2xl font-bold text-green-600 dark:text-green-400">{Number(totalResueltos.count)}</p>
+          </div>
+          <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Total</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalReportes}</p>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <form method="GET" action="/admin/reportes" class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-5 mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label for="estado" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado</label>
+              <select id="estado" name="estado" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <option value="activos" selected={fEstado === 'activos'}>Activos</option>
+                <option value="resueltos" selected={fEstado === 'resueltos'}>Resueltos</option>
+                <option value="todos" selected={fEstado === 'todos'}>Todos</option>
+              </select>
+            </div>
+            <div>
+              <label for="tipo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+              <select id="tipo" name="tipo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <option value="">Todos</option>
+                <option value="cerrada" selected={fTipo === 'cerrada'}>Cerrada</option>
+                <option value="datos_incorrectos" selected={fTipo === 'datos_incorrectos'}>Datos incorrectos</option>
+                <option value="otro" selected={fTipo === 'otro'}>Otro</option>
+              </select>
+            </div>
+            <div>
+              <label for="farmacia" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Farmacia</label>
+              <select id="farmacia" name="farmacia" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                <option value="">Todas</option>
+                {todasFarmacias.map(f => (
+                  <option value={f.id} selected={fFarmacia === String(f.id)}>{f.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div class="flex items-end gap-2">
+              <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg transition-colors">Filtrar</button>
+              {(fEstado !== 'activos' || fTipo || fFarmacia) && (
+                <a href="/admin/reportes" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">Limpiar</a>
+              )}
+            </div>
+          </div>
+        </form>
+
+        <!-- Listado -->
+        <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div class="px-4 sm:px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-gray-100">Reportes</h2>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{totalReportes} reportes</span>
+          </div>
+
+          <!-- Cards (móvil) -->
+          <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-800">
+            {listaReportes.map(r => (
+              <div class:list={['px-4 py-4', r.resuelto ? 'opacity-60' : '']}>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="font-medium text-gray-900 dark:text-gray-100">{r.nombreFarmacia || 'Sin farmacia'}</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class:list={['inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded-full', tipoColor[r.tipo] || tipoColor.otro]}>
+                        {tipoLabel[r.tipo] || r.tipo}
+                      </span>
+                      {r.resuelto && (
+                        <span class="inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                          Resuelto
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.confirmaciones} confirm.</span>
+                </div>
+                {r.detalle && <p class="mt-2 text-xs text-gray-600 dark:text-gray-300 italic">"{r.detalle}"</p>}
+                {r.inicioTurno && (
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Turno: {formatCaracasDateTime(new Date(r.inicioTurno))} – {formatCaracasDateTime(new Date(r.finTurno!))}
+                  </p>
+                )}
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{r.createdAt}</p>
+                <div class="mt-3 flex items-center gap-3 text-sm">
+                  {!r.resuelto && (
+                    <form method="POST" action={actions.resolverReporte}>
+                      <input type="hidden" name="id" value={r.id} />
+                      <button type="submit" class="text-green-600 dark:text-green-400 hover:underline">Marcar resuelto</button>
+                    </form>
+                  )}
+                  <form method="POST" action={actions.eliminarReporte} onsubmit="return confirm('¿Eliminar este reporte?')">
+                    <input type="hidden" name="id" value={r.id} />
+                    <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Eliminar</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+            {listaReportes.length === 0 && (
+              <div class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                No se encontraron reportes con los filtros aplicados.
+              </div>
+            )}
+          </div>
+
+          <!-- Tabla (md+) -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm min-w-[700px]">
+              <thead class="bg-gray-50 dark:bg-gray-800/50">
+                <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <th class="px-4 py-3">Farmacia</th>
+                  <th class="px-4 py-3">Tipo</th>
+                  <th class="px-4 py-3">Detalle</th>
+                  <th class="px-4 py-3 text-center">Confirm.</th>
+                  <th class="px-4 py-3">Fecha</th>
+                  <th class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {listaReportes.map(r => (
+                  <tr class:list={['transition-colors', r.resuelto ? 'bg-green-50/50 dark:bg-green-900/10 opacity-60' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50']}>
+                    <td class="px-4 py-3">
+                      <p class="font-medium text-gray-900 dark:text-gray-100">{r.nombreFarmacia || '—'}</p>
+                      {r.inicioTurno && (
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                          Turno: {formatCaracasDateTime(new Date(r.inicioTurno))}
+                        </p>
+                      )}
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class:list={['inline-flex px-2 py-0.5 text-xs font-medium rounded-full', tipoColor[r.tipo] || tipoColor.otro]}>
+                        {tipoLabel[r.tipo] || r.tipo}
+                      </span>
+                      {r.resuelto && (
+                        <span class="ml-1 inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                          Resuelto
+                        </span>
+                      )}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-[200px] truncate">{r.detalle || '—'}</td>
+                    <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-300">{r.confirmaciones}</td>
+                    <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.createdAt}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                      {!r.resuelto && (
+                        <form method="POST" action={actions.resolverReporte} class="inline mr-3">
+                          <input type="hidden" name="id" value={r.id} />
+                          <button type="submit" class="text-green-600 dark:text-green-400 hover:underline">Resuelto</button>
+                        </form>
+                      )}
+                      <form method="POST" action={actions.eliminarReporte} class="inline" onsubmit="return confirm('¿Eliminar este reporte?')">
+                        <input type="hidden" name="id" value={r.id} />
+                        <button type="submit" class="text-red-600 dark:text-red-400 hover:underline">Eliminar</button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+                {listaReportes.length === 0 && (
+                  <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      No se encontraron reportes con los filtros aplicados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPaginas > 1 && (
+            <div class="px-4 sm:px-5 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                Página {paginaActual} de {totalPaginas} · {totalReportes} reportes
+              </span>
+              <div class="flex gap-2">
+                {paginaActual > 1 && (
+                  <a href={pageUrl({ pagina: String(paginaActual - 1) })} class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">← Anterior</a>
+                )}
+                {paginaActual < totalPaginas && (
+                  <a href={pageUrl({ pagina: String(paginaActual + 1) })} class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">Siguiente →</a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  </div>
+</Layout>

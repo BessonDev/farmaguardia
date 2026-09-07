@@ -32,6 +32,7 @@ export const reportes = sqliteTable('reportes', {
   tipo: text('tipo').notNull(), // 'cerrada' | 'datos_incorrectos' | 'otro'
   detalle: text('detalle'),
   confirmaciones: integer('confirmaciones').notNull().default(1),
+  resuelto: integer('resuelto', { mode: 'boolean' }).default(false),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
