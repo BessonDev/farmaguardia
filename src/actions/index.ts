@@ -301,7 +301,8 @@ export const server = {
   crearTurno: defineAction({
     accept: 'form',
     input: z.object({
-      farmaciaId: z.coerce.number(),
+      farmaciaId: z.coerce.number().optional(),
+      grupo: z.coerce.number().optional(),
       inicio: z.string(),
       fin: z.string(),
       notas: z.string().nullable().optional(),
@@ -314,7 +315,56 @@ export const server = {
         throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha de inicio debe ser anterior a la fecha de fin' });
       }
 
-      // Validación de solapamiento (solo para la misma farmacia)
+      // Modo grupo: crear turnos para todas las farmacias del grupo + 24h
+      if (input.grupo) {
+        const farmaciasGrupo = await db
+          .select({ id: farmacias.id })
+          .from(farmacias)
+          .where(and(
+            eq(farmacias.activa, 1),
+            sql`(${farmacias.grupo} = ${input.grupo} OR ${farmacias.grupo} IS NULL)`
+          ));
+
+        if (farmaciasGrupo.length === 0) {
+          throw new ActionError({ code: 'BAD_REQUEST', message: `No hay farmacias activas en el grupo ${input.grupo}` });
+        }
+
+        let creados = 0;
+        let omitidos = 0;
+
+        for (const f of farmaciasGrupo) {
+          const overlap = await db
+            .select({ id: turnos.id })
+            .from(turnos)
+            .where(and(
+              lt(turnos.inicio, fin),
+              gt(turnos.fin, inicio),
+              eq(turnos.farmaciaId, f.id)
+            ))
+            .limit(1);
+
+          if (overlap.length > 0) {
+            omitidos++;
+            continue;
+          }
+
+          await db.insert(turnos).values({
+            farmaciaId: f.id,
+            inicio,
+            fin,
+            notas: input.notas || null,
+          });
+          creados++;
+        }
+
+        return { ok: true, creados, omitidos };
+      }
+
+      // Modo individual
+      if (!input.farmaciaId) {
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'Seleccioná una farmacia o un grupo' });
+      }
+
       const overlap = await db
         .select({ id: turnos.id })
         .from(turnos)
@@ -335,7 +385,84 @@ export const server = {
         fin,
         notas: input.notas || null,
       });
-      return { ok: true };
+      return { ok: true, creados: 1, omitidos: 0 };
+    },
+  }),
+
+  // ─── Crear turnos por grupo (botón rápido) ───
+  crearTurnosPorGrupo: defineAction({
+    accept: 'form',
+    input: z.object({
+      fecha: z.string().optional(),
+    }),
+    handler: async (input) => {
+      const config = (await db.select().from(configGrupos).limit(1))[0];
+      if (!config) {
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'No hay configuración de grupos. Configurala desde el Dashboard.' });
+      }
+
+      // Calcular grupo del día
+      const fechaStr = input.fecha || (() => {
+        const now = new Date();
+        const caracas = new Date(now.getTime() - 4 * 3600 * 1000);
+        return caracas.toISOString().split('T')[0];
+      })();
+
+      const [fY, fM, fD] = fechaStr.split('-').map(Number);
+      const fechaDia = new Date(Date.UTC(fY, fM - 1, fD));
+      const [iY, iM, iD] = config.fechaInicio.split('-').map(Number);
+      const fechaInicio = new Date(Date.UTC(iY, iM - 1, iD));
+      const diasDiff = Math.floor((fechaDia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
+      const grupoActual = (diasDiff % config.cantidadGrupos) + 1;
+
+      // Buscar farmacias del grupo + 24h (grupo = null), activas
+      const farmaciasGrupo = await db
+        .select({ id: farmacias.id, nombre: farmacias.nombre })
+        .from(farmacias)
+        .where(and(
+          eq(farmacias.activa, 1),
+          sql`(${farmacias.grupo} = ${grupoActual} OR ${farmacias.grupo} IS NULL)`
+        ));
+
+      if (farmaciasGrupo.length === 0) {
+        throw new ActionError({ code: 'BAD_REQUEST', message: `No hay farmacias activas para el grupo ${grupoActual}` });
+      }
+
+      // Turno de 24h: 08:00 Caracas → 08:00 siguiente día Caracas
+      const inicioUTC = createUtcFromCaracas(fY, fM, fD, 8, 0);
+      const finUTC = createUtcFromCaracas(fY, fM, fD + 1, 8, 0);
+      const inicioISO = toUtcISO(inicioUTC);
+      const finISO = toUtcISO(finUTC);
+
+      let creados = 0;
+      let omitidos = 0;
+
+      for (const f of farmaciasGrupo) {
+        const overlap = await db
+          .select({ id: turnos.id })
+          .from(turnos)
+          .where(and(
+            lt(turnos.inicio, finISO),
+            gt(turnos.fin, inicioISO),
+            eq(turnos.farmaciaId, f.id)
+          ))
+          .limit(1);
+
+        if (overlap.length > 0) {
+          omitidos++;
+          continue;
+        }
+
+        await db.insert(turnos).values({
+          farmaciaId: f.id,
+          inicio: inicioISO,
+          fin: finISO,
+          notas: `Grupo ${grupoActual}`,
+        });
+        creados++;
+      }
+
+      return { ok: true, grupo: grupoActual, totalGrupos: config.cantidadGrupos, creados, omitidos, fecha: fechaStr };
     },
   }),
 

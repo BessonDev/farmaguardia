@@ -4,15 +4,17 @@ import AdminSidebar from '../../components/AdminSidebar.astro';
 import AdminModal from '../../components/AdminModal.astro';
 import { actions } from 'astro:actions';
 import { db } from '../../db';
-import { farmacias, turnos } from '../../db/schema';
+import { farmacias, turnos, configGrupos } from '../../db/schema';
 import { eq, and, gt, gte, lte, asc } from 'drizzle-orm';
 import { toUtcISO, nowUtc, toCaracasDateTimeLocal, formatCaracasDateTime, utcToCaracas } from '../../utils/time';
 
 const result = Astro.getActionResult(actions.crearTurno) ?? Astro.getActionResult(actions.editarTurno) ?? Astro.getActionResult(actions.eliminarTurno) ?? Astro.getActionResult(actions.overrideTurnoHoy);
+const resultGrupo = Astro.getActionResult(actions.crearTurnosPorGrupo);
 const resultImport = Astro.getActionResult(actions.importarTurnos);
 
 const listaFarmacias = await db.select().from(farmacias).where(eq(farmacias.activa, 1)).orderBy(asc(farmacias.nombre));
 const todasFarmacias = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
+const configGruposRow = (await db.select().from(configGrupos).limit(1))[0] ?? null;
 
 const ahoraISO = toUtcISO(nowUtc());
 
@@ -79,7 +81,12 @@ function esHoy(iso: string): boolean {
       <main class="flex-1 p-4 sm:p-6 overflow-x-clip">
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Gestión de Turnos</h1>
-          <div class="flex gap-2">
+          <div class="flex gap-2 flex-wrap">
+            <form method="POST" action={actions.crearTurnosPorGrupo}>
+              <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
+                Crear turnos del grupo de hoy
+              </button>
+            </form>
             <button type="button" data-open-importar class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors whitespace-nowrap">
               Importar
             </button>
@@ -96,7 +103,20 @@ function esHoy(iso: string): boolean {
         )}
         {result?.data?.ok && (
           <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">
-            {result.data.farmaciaId ? 'Turno de emergencia asignado.' : 'Operación exitosa.'}
+            {result.data.creados ? `${result.data.creados} turnos creados` : (result.data.farmaciaId ? 'Turno de emergencia asignado.' : 'Operación exitosa.')}
+            {result.data.omitidos > 0 && `, ${result.data.omitidos} omitidos (ya tenían turno)`}.
+          </div>
+        )}
+
+        {resultGrupo?.error && (
+          <div class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+            {resultGrupo.error.message}
+          </div>
+        )}
+        {resultGrupo?.data?.ok && (
+          <div class="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">
+            Grupo {resultGrupo.data.grupo} de {resultGrupo.data.totalGrupos} — {resultGrupo.data.fecha}: {resultGrupo.data.creados} turnos creados
+            {resultGrupo.data.omitidos > 0 && `, ${resultGrupo.data.omitidos} omitidos`}.
           </div>
         )}
 
@@ -293,13 +313,36 @@ function esHoy(iso: string): boolean {
     <form id="turno-form" method="POST" action="?_action=crearTurno" class="grid grid-cols-1 gap-4">
       <input type="hidden" name="id" id="t-id" />
       <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modo de creación</label>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="radio" name="modoTurno" value="individual" checked class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600" />
+            Individual
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="radio" name="modoTurno" value="grupo" class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600" />
+            Por grupo
+          </label>
+        </div>
+      </div>
+      <div id="campo-farmacia">
         <label for="t-farmaciaId" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Farmacia *</label>
-        <select id="t-farmaciaId" name="farmaciaId" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <select id="t-farmaciaId" name="farmaciaId" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           <option value="">Seleccionar farmacia...</option>
           {todasFarmacias.map(f => (
             <option value={f.id}>{f.nombre}</option>
           ))}
         </select>
+      </div>
+      <div id="campo-grupo" class="hidden">
+        <label for="t-grupo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grupo *</label>
+        <select id="t-grupo" name="grupo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <option value="">Seleccionar grupo...</option>
+          {configGruposRow && Array.from({ length: configGruposRow.cantidadGrupos }, (_, i) => i + 1).map(n => (
+            <option value={n}>Grupo {n}</option>
+          ))}
+        </select>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Se crean turnos para todas las farmacias del grupo + 24h</p>
       </div>
       <div>
         <label for="t-inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inicio (hora Caracas) *</label>
@@ -393,18 +436,41 @@ function esHoy(iso: string): boolean {
   <script is:inline define:vars={{ turnosData: listaTurnos }}>
     const form = document.getElementById('turno-form');
     const modalTitle = document.querySelector('#modal-turno h2');
+    const campoFarmacia = document.getElementById('campo-farmacia');
+    const campoGrupo = document.getElementById('campo-grupo');
+    const radios = document.querySelectorAll('input[name="modoTurno"]');
     const t = {
       id: document.getElementById('t-id'),
       farmaciaId: document.getElementById('t-farmaciaId'),
+      grupo: document.getElementById('t-grupo'),
       inicio: document.getElementById('t-inicio'),
       fin: document.getElementById('t-fin'),
       notas: document.getElementById('t-notas'),
     };
 
+    function toggleModo() {
+      const modo = document.querySelector('input[name="modoTurno"]:checked')?.value;
+      if (modo === 'grupo') {
+        campoFarmacia.classList.add('hidden');
+        campoGrupo.classList.remove('hidden');
+        t.farmaciaId.removeAttribute('required');
+        t.farmaciaId.value = '';
+        t.grupo.setAttribute('required', '');
+      } else {
+        campoFarmacia.classList.remove('hidden');
+        campoGrupo.classList.add('hidden');
+        t.grupo.removeAttribute('required');
+        t.grupo.value = '';
+        t.farmaciaId.setAttribute('required', '');
+      }
+    }
+    radios.forEach(r => r.addEventListener('change', toggleModo));
+
     function openNuevo() {
       form.reset();
       form.action = '?_action=crearTurno';
       t.id.value = '';
+      toggleModo();
       if (modalTitle) modalTitle.textContent = 'Nuevo turno';
       window.FarmaGuardiaAdmin.openModal('modal-turno');
     }
@@ -418,6 +484,8 @@ function esHoy(iso: string): boolean {
       t.inicio.value = data.inicioLocal;
       t.fin.value = data.finLocal;
       t.notas.value = data.notas || '';
+      campoFarmacia.classList.remove('hidden');
+      campoGrupo.classList.add('hidden');
       if (modalTitle) modalTitle.textContent = `Editar turno #${data.id}`;
       window.FarmaGuardiaAdmin.openModal('modal-turno');
     }
