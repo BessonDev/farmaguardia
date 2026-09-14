@@ -2,7 +2,7 @@ import { defineAction, ActionError } from 'astro:actions';
 import { z } from 'astro/zod';
 import { timingSafeEqual as nodeTimingSafeEqual, randomBytes } from 'node:crypto';
 import { db } from '../db';
-import { farmacias, turnos, reportes } from '../db/schema';
+import { farmacias, turnos, reportes, configGrupos } from '../db/schema';
 import { eq, and, gt, gte, lt, lte, sql, inArray } from 'drizzle-orm';
 import { parseCaracasDateTimeLocal, toUtcISO, nowUtc, createUtcFromCaracas } from '../utils/time';
 import { sendReportToTelegram, testTelegramConnection, isTelegramConfigured } from '../utils/telegram';
@@ -115,6 +115,7 @@ export const server = {
       longitud: z.string().nullable().optional(),
       delivery: z.string().optional(),
       regente: z.string().optional(),
+      grupo: z.string().optional(),
       activa: z.string().optional(),
     }),
     handler: async (input) => {
@@ -129,6 +130,7 @@ export const server = {
         longitud: input.longitud ? Number(input.longitud) : null,
         delivery: input.delivery === 'on',
         regente: input.regente === 'on',
+        grupo: input.grupo ? Number(input.grupo) : null,
         activa: input.activa === 'on',
       });
       return { ok: true };
@@ -149,6 +151,7 @@ export const server = {
       longitud: z.string().nullable().optional(),
       delivery: z.string().optional(),
       regente: z.string().optional(),
+      grupo: z.string().optional(),
       activa: z.string().optional(),
     }),
     handler: async (input) => {
@@ -163,6 +166,7 @@ export const server = {
         longitud: input.longitud ? Number(input.longitud) : null,
         delivery: input.delivery === 'on',
         regente: input.regente === 'on',
+        grupo: input.grupo ? Number(input.grupo) : null,
         activa: input.activa === 'on',
       }).where(eq(farmacias.id, input.id));
       return { ok: true };
@@ -218,6 +222,7 @@ export const server = {
         longitud: header.indexOf('longitud'),
         delivery: header.indexOf('delivery'),
         regente: header.indexOf('regente'),
+        grupo: header.indexOf('grupo'),
         activa: header.indexOf('activa'),
       };
 
@@ -257,6 +262,7 @@ export const server = {
           longitud: col.longitud >= 0 && f[col.longitud] != null && String(f[col.longitud]) !== '' ? Number(f[col.longitud]) : null,
           delivery: col.delivery >= 0 ? normalizarBooleano(f[col.delivery], false) : false,
           regente: col.regente >= 0 ? normalizarBooleano(f[col.regente], false) : false,
+          grupo: col.grupo >= 0 && f[col.grupo] != null && String(f[col.grupo]) !== '' ? Number(f[col.grupo]) : null,
           activa: col.activa >= 0 ? normalizarBooleano(f[col.activa], true) : true,
         };
 
@@ -601,6 +607,30 @@ export const server = {
     input: z.object({ id: z.coerce.number() }),
     handler: async (input) => {
       await db.delete(reportes).where(eq(reportes.id, input.id));
+      return { ok: true };
+    },
+  }),
+
+  // ─── Config Grupos ───
+  guardarConfigGrupos: defineAction({
+    accept: 'form',
+    input: z.object({
+      fechaInicio: z.string(),
+      cantidadGrupos: z.coerce.number().min(1).max(30),
+    }),
+    handler: async (input) => {
+      const existente = await db.select().from(configGrupos).limit(1);
+      if (existente.length > 0) {
+        await db.update(configGrupos).set({
+          fechaInicio: input.fechaInicio,
+          cantidadGrupos: input.cantidadGrupos,
+        }).where(eq(configGrupos.id, existente[0].id));
+      } else {
+        await db.insert(configGrupos).values({
+          fechaInicio: input.fechaInicio,
+          cantidadGrupos: input.cantidadGrupos,
+        });
+      }
       return { ok: true };
     },
   }),

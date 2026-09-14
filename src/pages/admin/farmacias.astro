@@ -4,13 +4,15 @@ import AdminSidebar from '../../components/AdminSidebar.astro';
 import AdminModal from '../../components/AdminModal.astro';
 import { actions } from 'astro:actions';
 import { db } from '../../db';
-import { farmacias } from '../../db/schema';
+import { farmacias, configGrupos } from '../../db/schema';
 import { eq, asc } from 'drizzle-orm';
 
 const result = Astro.getActionResult(actions.crearFarmacia) ?? Astro.getActionResult(actions.editarFarmacia) ?? Astro.getActionResult(actions.eliminarFarmacia);
 const resultImport = Astro.getActionResult(actions.importarFarmacias);
 
 const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
+const configGruposRow = (await db.select().from(configGrupos).limit(1))[0] ?? null;
+const maxGrupo = configGruposRow?.cantidadGrupos ?? 10;
 ---
 
 <Layout title="Farmacias - FarmaGuardia Admin" hideFooter>
@@ -127,6 +129,11 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
                       <span class={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${f.activa ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
                         {f.activa ? 'Activa' : 'Inactiva'}
                       </span>
+                      {f.grupo != null && (
+                        <span class="ml-1 inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                          G{f.grupo}
+                        </span>
+                      )}
                     </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                       <button type="button" data-editar={f.id} class="text-primary hover:underline mr-3">Editar</button>
@@ -196,6 +203,15 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           <input type="checkbox" name="activa" id="f-activa" checked class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
           Activa
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <span>Grupo:</span>
+          <select name="grupo" id="f-grupo" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm">
+            <option value="">Ninguno (24h)</option>
+            {Array.from({ length: maxGrupo }, (_, i) => i + 1).map(n => (
+              <option value={n}>{n}</option>
+            ))}
+          </select>
         </label>
       </div>
       <div class="sm:col-span-2 flex gap-3 pt-2">
@@ -286,6 +302,7 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
       longitud: document.getElementById('f-longitud'),
       delivery: document.getElementById('f-delivery'),
       regente: document.getElementById('f-regente'),
+      grupo: document.getElementById('f-grupo'),
       activa: document.getElementById('f-activa'),
     };
 
@@ -315,6 +332,7 @@ const lista = await db.select().from(farmacias).orderBy(asc(farmacias.nombre));
       f.delivery.checked = !!data.delivery;
       f.regente.checked = !!data.regente;
       f.activa.checked = !!data.activa;
+      f.grupo.value = data.grupo ?? '';
       if (modalTitle) modalTitle.textContent = `Editar: ${data.nombre}`;
       window.FarmaGuardiaAdmin.openModal('modal-farmacia');
     }

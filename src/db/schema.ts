@@ -13,6 +13,7 @@ export const farmacias = sqliteTable('farmacias', {
   imagenUrl: text('imagen_url'),
   delivery: integer('delivery', { mode: 'boolean' }).default(false),
   regente: integer('regente', { mode: 'boolean' }).default(false),
+  grupo: integer('grupo'),
   activa: integer('activa', { mode: 'boolean' }).default(true),
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
@@ -52,6 +53,13 @@ export const visitas = sqliteTable('visitas', {
   createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const configGrupos = sqliteTable('config_grupos', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  fechaInicio: text('fecha_inicio').notNull(),
+  cantidadGrupos: integer('cantidad_grupos').notNull(),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Farmacia = typeof farmacias.$inferSelect;
 export type NewFarmacia = typeof farmacias.$inferInsert;
 export type Turno = typeof turnos.$inferSelect;
@@ -62,3 +70,5 @@ export type ReporteConfirmacion = typeof reporteConfirmaciones.$inferSelect;
 export type NewReporteConfirmacion = typeof reporteConfirmaciones.$inferInsert;
 export type Visita = typeof visitas.$inferSelect;
 export type NewVisita = typeof visitas.$inferInsert;
+export type ConfigGrupo = typeof configGrupos.$inferSelect;
+export type NewConfigGrupo = typeof configGrupos.$inferInsert;
