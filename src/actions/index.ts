@@ -303,13 +303,28 @@ export const server = {
     input: z.object({
       farmaciaId: z.coerce.number().optional(),
       grupo: z.coerce.number().optional(),
-      inicio: z.string(),
-      fin: z.string(),
+      es24h: z.string().optional(),
+      fechaTurno: z.string().optional(),
+      inicio: z.string().optional(),
+      fin: z.string().optional(),
       notas: z.string().nullable().optional(),
     }),
     handler: async (input) => {
-      const inicio = parseCaracasDateTimeLocal(input.inicio);
-      const fin = parseCaracasDateTimeLocal(input.fin);
+      let inicio: Date;
+      let fin: Date;
+
+      if (input.es24h === 'on' && input.fechaTurno) {
+        // Modo 24h: fecha → 08:00 Caracas → 08:00 siguiente día Caracas
+        const [fY, fM, fD] = input.fechaTurno.split('-').map(Number);
+        inicio = createUtcFromCaracas(fY, fM, fD, 8, 0);
+        fin = createUtcFromCaracas(fY, fM, fD + 1, 8, 0);
+      } else if (input.inicio) {
+        // Modo personalizado
+        inicio = parseCaracasDateTimeLocal(input.inicio);
+        fin = input.fin ? parseCaracasDateTimeLocal(input.fin) : new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
+      } else {
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'Seleccioná una fecha o completá las horas manualmente' });
+      }
 
       if (inicio >= fin) {
         throw new ActionError({ code: 'BAD_REQUEST', message: 'La fecha de inicio debe ser anterior a la fecha de fin' });

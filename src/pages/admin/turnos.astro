@@ -82,9 +82,10 @@ function esHoy(iso: string): boolean {
         <div class="flex items-center justify-between mb-6">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Gestión de Turnos</h1>
           <div class="flex gap-2 flex-wrap">
-            <form method="POST" action={actions.crearTurnosPorGrupo}>
+            <form method="POST" action={actions.crearTurnosPorGrupo} class="flex items-center gap-2">
+              <input type="date" name="fecha" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm" />
               <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-                Crear turnos del grupo de hoy
+                Crear turnos del grupo
               </button>
             </form>
             <button type="button" data-open-importar class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors whitespace-nowrap">
@@ -345,14 +346,25 @@ function esHoy(iso: string): boolean {
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Se crean turnos para todas las farmacias del grupo + 24h</p>
       </div>
       <div>
-        <label for="t-inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inicio (hora Caracas) *</label>
-        <input type="datetime-local" id="t-inicio" name="inicio" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ej: turno estándar 08:00</p>
+        <label for="t-fechaTurno" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha del turno *</label>
+        <input type="date" id="t-fechaTurno" name="fechaTurno" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
       </div>
       <div>
-        <label for="t-fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fin (hora Caracas) *</label>
-        <input type="datetime-local" id="t-fin" name="fin" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ej: turno estándar 08:00 del día siguiente</p>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" name="es24h" id="t-es24h" checked class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded" />
+          Turno de 24h (08:00 → 08:00 siguiente día)
+        </label>
+      </div>
+      <div id="campos-horario-custom" class="hidden space-y-4">
+        <div>
+          <label for="t-inicio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Inicio (hora Caracas) *</label>
+          <input type="datetime-local" id="t-inicio" name="inicio" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+        </div>
+        <div>
+          <label for="t-fin" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fin (hora Caracas) *</label>
+          <input type="datetime-local" id="t-fin" name="fin" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Si es igual a la hora de inicio, se asume 24h</p>
+        </div>
       </div>
       <div>
         <label for="t-notas" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas (opcional)</label>
@@ -438,6 +450,9 @@ function esHoy(iso: string): boolean {
     const modalTitle = document.querySelector('#modal-turno h2');
     const campoFarmacia = document.getElementById('campo-farmacia');
     const campoGrupo = document.getElementById('campo-grupo');
+    const camposCustom = document.getElementById('campos-horario-custom');
+    const fechaTurno = document.getElementById('t-fechaTurno');
+    const es24h = document.getElementById('t-es24h');
     const radios = document.querySelectorAll('input[name="modoTurno"]');
     const t = {
       id: document.getElementById('t-id'),
@@ -466,11 +481,26 @@ function esHoy(iso: string): boolean {
     }
     radios.forEach(r => r.addEventListener('change', toggleModo));
 
+    function toggleEs24h() {
+      if (es24h.checked) {
+        camposCustom.classList.add('hidden');
+        fechaTurno.setAttribute('required', '');
+        t.inicio.removeAttribute('required');
+        t.fin.removeAttribute('required');
+      } else {
+        camposCustom.classList.remove('hidden');
+        fechaTurno.removeAttribute('required');
+        t.inicio.setAttribute('required', '');
+      }
+    }
+    es24h.addEventListener('change', toggleEs24h);
+
     function openNuevo() {
       form.reset();
       form.action = '?_action=crearTurno';
       t.id.value = '';
       toggleModo();
+      toggleEs24h();
       if (modalTitle) modalTitle.textContent = 'Nuevo turno';
       window.FarmaGuardiaAdmin.openModal('modal-turno');
     }
