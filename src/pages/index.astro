@@ -68,7 +68,7 @@ for (const r of reportesActivos) {
   }
 }
 const finSemana = new Date(ahora);
-finSemana.setUTCDate(finSemana.getUTCDate() + 7);
+finSemana.setUTCDate(finSemana.getUTCDate() + 1);
 finSemana.setUTCHours(23, 59, 59, 999);
 const finSemanaISO = toUtcISO(finSemana);
 
