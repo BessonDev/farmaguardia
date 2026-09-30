@@ -5,8 +5,9 @@ import CardTurnoActual from '../components/CardTurnoActual.astro';
 import ListaProximosTurnos from '../components/ListaProximosTurnos.astro';
 import { db } from '../db';
 import { farmacias, turnos, reportes } from '../db/schema';
-import { eq, and, gte, lte, gt, inArray } from 'drizzle-orm';
+import { eq, and, gte, lte, gt, inArray, asc } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime } from '../utils/time';
+import { rotarPorDia } from '../utils/ordenTurnos';
 
 export const prerender = false;
 
@@ -42,7 +43,7 @@ const turnosActivos = await db
     gt(turnos.fin, ahoraISO),
     eq(farmacias.activa, 1)
   ))
-  .orderBy(turnos.inicio);
+  .orderBy(asc(farmacias.nombre), asc(turnos.inicio));
 
 // Reportes de los turnos activos (para badge de confirmación)
 const turnosActivosIds = turnosActivos.map(t => t.id);
@@ -100,10 +101,13 @@ const proximosTurnosResult = await db
     lte(turnos.inicio, finSemanaISO),
     eq(farmacias.activa, 1)
   ))
-  .orderBy(turnos.inicio)
+  .orderBy(asc(farmacias.nombre), asc(turnos.inicio))
   .limit(14);
 
-const proximosTurnos = proximosTurnosResult;
+// Orden visual rotativo: el listado rota cada día para que ninguna farmacia
+// quede fijada en la primera posición. Ambas listas comparten el mismo offset.
+const turnosActivosOrdenados = rotarPorDia(turnosActivos, ahora);
+const proximosTurnos = rotarPorDia(proximosTurnosResult, ahora);
 
 // Números de emergencia locales
 const EMERGENCIAS = [
@@ -135,7 +139,7 @@ const EMERGENCIAS = [
           </span>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-          {turnosActivos.map(turno => (
+          {turnosActivosOrdenados.map(turno => (
             <CardTurnoActual
               farmacia={turno.farmacia}
               turnoId={turno.id}
