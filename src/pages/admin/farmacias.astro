@@ -15,7 +15,7 @@ const configGruposRow = (await db.select().from(configGrupos).limit(1))[0] ?? nu
 const maxGrupo = configGruposRow?.cantidadGrupos ?? 10;
 ---
 
-<Layout title="Farmacias - FarmaGuardia Admin" hideFooter>
+<Layout title="Farmacias - FarmaGuardia Admin" hideFooter noindex>
   <div class="min-h-full flex">
     <AdminSidebar active="farmacias" />
 

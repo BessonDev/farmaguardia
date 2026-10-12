@@ -245,7 +245,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<bool
       reply_to_message_id: replyTo,
     });
 
-  const siteUrl = getEnv('SITE_URL') || 'https://farmaguardia.example.com';
+  const siteUrl = getEnv('SITE_URL') || 'https://farmaguardia.com';
   const HELP = [
     '🤖 <b>FarmaGuardia Bot</b>',
     '',

@@ -78,7 +78,7 @@ El admin vive en `http://localhost:4321/admin` con la contraseña de `ADMIN_PASS
 | Variable | Requerida | Descripción |
 |---|---|---|
 | `ADMIN_PASSWORD` | ✅ Sí | Contraseña del panel de administración |
-| `SITE_URL` | ✅ Sí | URL pública del sitio (ej: `https://farmaguardia.tudominio.com`) |
+| `SITE_URL` | ✅ Sí | URL pública del sitio (ej: `https://farmaguardia.com`) |
 | `TELEGRAM_BOT_TOKEN` | ⬜ No | Token del bot (reportes + bot consultable) |
 | `TELEGRAM_CHAT_ID` | ⬜ No | Chat/grupo donde llegan los reportes y el test del bot |
 | `TELEGRAM_WEBHOOK_SECRET` | ⬜ No | Secret para validar updates del webhook del bot |
@@ -93,7 +93,7 @@ El admin vive en `http://localhost:4321/admin` con la contraseña de `ADMIN_PASS
 El bot responde mensajes entrantes vía webhook. Configurá el webhook apuntando a tu dominio:
 
 ```sh
-TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... SITE_URL=https://farmaguardia.tudominio.com npm run bot:set-webhook
+TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... SITE_URL=https://farmaguardia.com npm run bot:set-webhook
 ```
 
 - El webhook apunta a `POST {SITE_URL}/api/telegram/webhook`. Requiere HTTPS público.
@@ -120,7 +120,7 @@ docker build -t farmaguardia .
 docker run -d \
   -p 8080:8080 \
   -e ADMIN_PASSWORD=... \
-  -e SITE_URL=https://farmaguardia.tudominio.com \
+  -e SITE_URL=https://farmaguardia.com \
   -e DB_PATH=/data/farmaguardia.db \
   -v farmaguardia-data:/data \
   farmaguardia
