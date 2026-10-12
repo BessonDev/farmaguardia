@@ -6,11 +6,12 @@ interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
+  ogImageAlt?: string;
   hideFooter?: boolean;
   noindex?: boolean;
 }
 
-const { title = 'FarmaGuardia - Farmacias de Turno en Puerto Ayacucho', description = 'Consulta en tiempo real qué farmacia está de turno 24h en Puerto Ayacucho, Estado Amazonas. Contacto directo y ubicación.', ogImage = '/og-image.png', hideFooter = false, noindex = false, } = Astro.props;
+const { title = 'FarmaGuardia - Farmacias de Turno en Puerto Ayacucho', description = 'Consulta en tiempo real qué farmacia está de turno 24h en Puerto Ayacucho, Estado Amazonas. Contacto directo y ubicación.', ogImage = '/og-image.png', ogImageAlt = 'FarmaGuardia: farmacias de turno en Puerto Ayacucho', hideFooter = false, noindex = false, } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -34,6 +35,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={new URL(ogImage, Astro.site)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogImageAlt} />
     <meta property="og:site_name" content="FarmaGuardia" />
     <meta property="og:locale" content="es_VE" />
 
@@ -42,6 +46,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={new URL(ogImage, Astro.site)} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
