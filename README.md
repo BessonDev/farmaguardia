@@ -78,7 +78,6 @@ El admin vive en `http://localhost:4321/admin` con la contraseña de `ADMIN_PASS
 | Variable | Requerida | Descripción |
 |---|---|---|
 | `ADMIN_PASSWORD` | ✅ Sí | Contraseña del panel de administración |
-| `SITE_URL` | ✅ Sí | URL pública del sitio (ej: `https://farmaguardia.com`) |
 | `TELEGRAM_BOT_TOKEN` | ⬜ No | Token del bot (reportes + bot consultable) |
 | `TELEGRAM_CHAT_ID` | ⬜ No | Chat/grupo donde llegan los reportes y el test del bot |
 | `TELEGRAM_WEBHOOK_SECRET` | ⬜ No | Secret para validar updates del webhook del bot |
@@ -93,10 +92,10 @@ El admin vive en `http://localhost:4321/admin` con la contraseña de `ADMIN_PASS
 El bot responde mensajes entrantes vía webhook. Configurá el webhook apuntando a tu dominio:
 
 ```sh
-TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... SITE_URL=https://farmaguardia.com npm run bot:set-webhook
+TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=... npm run bot:set-webhook
 ```
 
-- El webhook apunta a `POST {SITE_URL}/api/telegram/webhook`. Requiere HTTPS público.
+- El webhook apunta a `POST https://farmaguardia.com/api/telegram/webhook`. Requiere HTTPS público.
 - **El `secret_token` debe coincidir en DOS lados**: la env `TELEGRAM_WEBHOOK_SECRET` (que valida el endpoint) y el campo `secret_token` del `setWebhook` (lo que Telegram manda en el header `x-telegram-bot-api-secret-token`).
 - Si configurás el secret pero no lo pasás en el `setWebhook`, el bot devuelve `401 Unauthorized` y no responde.
 - Comandos: `/turno`, `/farmacias`, `/ayuda`, `/start`.
@@ -120,7 +119,6 @@ docker build -t farmaguardia .
 docker run -d \
   -p 8080:8080 \
   -e ADMIN_PASSWORD=... \
-  -e SITE_URL=https://farmaguardia.com \
   -e DB_PATH=/data/farmaguardia.db \
   -v farmaguardia-data:/data \
   farmaguardia
@@ -189,8 +187,8 @@ Si Dokploy no inyecta las env vars en la fase de build, `import.meta.env.ADMIN_P
 ### Webhook de Telegram devuelve `401 Unauthorized`
 El `secret_token` está configurado en el endpoint pero no en el `setWebhook` (o viceversa). Ambos deben coincidir. Re-ejecutá `npm run bot:set-webhook` con el mismo `TELEGRAM_WEBHOOK_SECRET`.
 
-### Canonical / OpenGraph apuntan a `localhost`
-`astro.config.mjs` usa `site: process.env.SITE_URL || 'http://localhost:4321'`. Si el build corre sin `SITE_URL`, los meta `canonical`/`og:url` quedan con `localhost`. Asegurate de que `SITE_URL` esté disponible **durante el build** (env de build), no solo en runtime.
+### Canonical / OpenGraph apuntan al dominio equivocado
+La URL pública vive en `site.config.mjs` (fuente única, hardcodeada). No se inyecta por env ni por build arg: un valor equivocado envenenaba `canonical`, `og:url`, `og:image`, `robots.txt` y el sitemap al mismo tiempo. Si cambiás de dominio, editá ese archivo y redeployá.
 
 ### Favicon/PWA viejo en el teléfono
 El Service Worker cachea los assets. Si seguís viendo el favicon viejo de Astro tras un deploy, hacé hard refresh (Ctrl+Shift+R) o reinstalá la PWA (quitar de apps y volver a instalar).

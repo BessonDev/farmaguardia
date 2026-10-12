@@ -1,11 +1,9 @@
-# ── Build stage ──
+# Build stage
 FROM node:22-slim AS build
 WORKDIR /app
 
-# SITE_URL como build arg: Astro lo hornea en build time para canonical/og:url.
-# En Dokploy se pasa en la sección "Build args" del servicio.
-ARG SITE_URL
-ENV SITE_URL=$SITE_URL
+# La URL publica del sitio vive en site.config.mjs (fuente unica).
+# No se pasa por build arg: un valor equivocado envenena canonical/og:url/sitemap.
 
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -13,7 +11,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# ── Runtime stage ──
+# Runtime stage
 FROM node:22-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app

@@ -10,6 +10,7 @@ import { db } from '../db';
 import { farmacias, turnos } from '../db/schema';
 import { eq, and, lte, gt } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime, formatCaracasFullDate } from './time';
+import { SITE_URL } from '../../site.config.mjs';
 
 /**
  * Lee una variable de entorno priorizando process.env (runtime).
@@ -245,7 +246,7 @@ export async function handleTelegramUpdate(update: TelegramUpdate): Promise<bool
       reply_to_message_id: replyTo,
     });
 
-  const siteUrl = getEnv('SITE_URL') || 'https://farmaguardia.com';
+  const siteUrl = SITE_URL;
   const HELP = [
     '🤖 <b>FarmaGuardia Bot</b>',
     '',
