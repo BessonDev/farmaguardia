@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import EmptyState from '../../components/EmptyState.astro';
 import AdminSidebar from '../../components/AdminSidebar.astro';
 import { db } from '../../db';
 import { farmacias, turnos } from '../../db/schema';
@@ -147,9 +148,14 @@ function pageUrl(params: Record<string, string>): string {
               </div>
             ))}
             {listaTurnos.length === 0 && (
-              <div class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                No se encontraron turnos con los filtros aplicados.
-              </div>
+              <EmptyState
+                variant="bare"
+                compact
+                icon="filter"
+                iconTone="neutral"
+                title="No se encontraron turnos"
+                description="Prueba con otros filtros para ver más resultados."
+              />
             )}
           </div>
 
@@ -182,8 +188,15 @@ function pageUrl(params: Record<string, string>): string {
                 ))}
                 {listaTurnos.length === 0 && (
                   <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                      No se encontraron turnos con los filtros aplicados.
+                    <td colspan="4" class="px-4 py-6">
+                      <EmptyState
+                        variant="bare"
+                        compact
+                        icon="filter"
+                        iconTone="neutral"
+                        title="No se encontraron turnos"
+                        description="Prueba con otros filtros para ver más resultados."
+                      />
                     </td>
                   </tr>
                 )}

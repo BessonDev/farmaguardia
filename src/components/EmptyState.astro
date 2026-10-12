@@ -1,0 +1,114 @@
+---
+const ICONS = {
+  box: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+  calendar: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+  search: 'M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z',
+  clock: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  alert: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.024-.833-2.794 0L3.34 16.5c-.77.833-.192 2.5 1.732 2.5z',
+  filter: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z',
+  plus: 'M12 4v16m8-8H4',
+  chart: 'M9 17v-6m4 6V7m4 10v-3M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z',
+} as const;
+
+interface Props {
+  title: string;
+  description?: string;
+  icon?: keyof typeof ICONS;
+  iconTone?: 'neutral' | 'primary' | 'warning';
+  headingLevel?: 2 | 3 | 4;
+  variant?: 'card' | 'bare';
+  actionHref?: string;
+  actionLabel?: string;
+  secondaryActionHref?: string;
+  secondaryActionLabel?: string;
+  compact?: boolean;
+  class?: string;
+}
+
+const {
+  title,
+  description,
+  icon = 'box',
+  iconTone = 'neutral',
+  headingLevel = 3,
+  variant = 'card',
+  actionHref,
+  actionLabel,
+  secondaryActionHref,
+  secondaryActionLabel,
+  compact = false,
+  class: className = '',
+} = Astro.props;
+
+const Tag = `h${headingLevel}` as 'h2' | 'h3' | 'h4';
+const hasPrimary = Boolean(actionHref && actionLabel);
+const hasSecondary = Boolean(secondaryActionHref && secondaryActionLabel);
+
+const toneClasses = {
+  neutral: 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500',
+  primary: 'bg-sky-50 text-sky-600 dark:bg-sky-950/50 dark:text-sky-400',
+  warning: 'bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-500',
+};
+---
+
+<div
+  class:list={[
+    variant === 'card'
+      ? 'rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm text-center'
+      : 'text-center',
+    compact ? 'px-5 py-8' : 'px-6 py-12 sm:px-10 sm:py-14',
+    className,
+  ]}
+>
+  <div
+    class:list={[
+      'mx-auto mb-4 flex items-center justify-center rounded-2xl',
+      compact ? 'h-11 w-11' : 'h-14 w-14',
+      toneClasses[iconTone],
+    ]}
+  >
+    <svg
+      class:list={[compact ? 'h-5 w-5' : 'h-6 w-6 sm:h-7 sm:w-7']}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      stroke-width="1.5"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d={ICONS[icon]} />
+    </svg>
+  </div>
+
+  <Tag class:list={['font-semibold text-gray-900 dark:text-gray-100 mb-1.5', compact ? 'text-sm' : 'text-lg sm:text-xl']}>
+    {title}
+  </Tag>
+
+  {description && (
+    <p class:list={['mx-auto max-w-md text-balance text-gray-500 dark:text-gray-400', compact ? 'text-xs' : 'text-sm sm:text-base']}>
+      {description}
+    </p>
+  )}
+
+  <slot />
+
+  {(hasPrimary || hasSecondary) && (
+    <div class:list={['flex flex-wrap items-center justify-center gap-3', compact ? 'mt-4' : 'mt-6']}>
+      {hasPrimary && (
+        <a
+          href={actionHref}
+          class="inline-flex min-h-11 items-center justify-center rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+        >
+          {actionLabel}
+        </a>
+      )}
+      {hasSecondary && (
+        <a
+          href={secondaryActionHref}
+          class="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+        >
+          {secondaryActionLabel}
+        </a>
+      )}
+    </div>
+  )}
+</div>

@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import EmptyState from '../../components/EmptyState.astro';
 import AdminSidebar from '../../components/AdminSidebar.astro';
 import AdminModal from '../../components/AdminModal.astro';
 import { actions } from 'astro:actions';
@@ -193,7 +194,7 @@ function esHoy(iso: string): boolean {
               </div>
             </div>
           ) : (
-            <p class="text-sm text-red-700 dark:text-red-400">No hay turnos activos en este momento.</p>
+            <p class="text-sm text-amber-700 dark:text-amber-400">No hay turnos activos en este momento.</p>
           )}
         </div>
 
@@ -241,9 +242,14 @@ function esHoy(iso: string): boolean {
               </div>
             ))}
             {listaTurnos.length === 0 && (
-              <div class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                No hay turnos programados. Crea el primero con "+ Nuevo turno".
-              </div>
+              <EmptyState
+                variant="bare"
+                compact
+                icon="plus"
+                iconTone="primary"
+                title="No hay turnos programados"
+                description={'Crea el primero con el botón "+ Nuevo turno".'}
+              />
             )}
           </div>
 
@@ -296,8 +302,15 @@ function esHoy(iso: string): boolean {
                 ))}
                 {listaTurnos.length === 0 && (
                   <tr>
-                    <td colspan="5" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                      No hay turnos programados. Crea el primero con "+ Nuevo turno".
+                    <td colspan="5" class="px-4 py-6">
+                      <EmptyState
+                        variant="bare"
+                        compact
+                        icon="plus"
+                        iconTone="primary"
+                        title="No hay turnos programados"
+                        description={'Crea el primero con el botón "+ Nuevo turno".'}
+                      />
                     </td>
                   </tr>
                 )}
