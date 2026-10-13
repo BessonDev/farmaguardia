@@ -5,6 +5,7 @@ import { db } from '../db';
 import { farmacias, turnos, reportes, configGrupos } from '../db/schema';
 import { eq, and, gt, gte, lt, lte, sql, inArray } from 'drizzle-orm';
 import { parseCaracasDateTimeLocal, toUtcISO, nowUtc, createUtcFromCaracas } from '../utils/time';
+import { fechaCaracasHoy, grupoParaFecha } from '../utils/grupos';
 import { sendReportToTelegram, testTelegramConnection, isTelegramConfigured } from '../utils/telegram';
 import { parseCsvClean } from '../utils/csv';
 
@@ -416,19 +417,14 @@ export const server = {
         throw new ActionError({ code: 'BAD_REQUEST', message: 'No hay configuración de grupos. Configurala desde el Dashboard.' });
       }
 
-      // Calcular grupo del día
-      const fechaStr = input.fecha || (() => {
-        const now = new Date();
-        const caracas = new Date(now.getTime() - 4 * 3600 * 1000);
-        return caracas.toISOString().split('T')[0];
-      })();
-
+      // Calcular grupo del día (día calendario Caracas)
+      const fechaStr = input.fecha || fechaCaracasHoy();
       const [fY, fM, fD] = fechaStr.split('-').map(Number);
-      const fechaDia = new Date(Date.UTC(fY, fM - 1, fD));
-      const [iY, iM, iD] = config.fechaInicio.split('-').map(Number);
-      const fechaInicio = new Date(Date.UTC(iY, iM - 1, iD));
-      const diasDiff = Math.floor((fechaDia.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
-      const grupoActual = (diasDiff % config.cantidadGrupos) + 1;
+      const grupoActual = grupoParaFecha({
+        fechaInicio: config.fechaInicio,
+        cantidadGrupos: config.cantidadGrupos,
+        fecha: fechaStr,
+      });
 
       // Buscar farmacias del grupo + 24h (grupo = null), activas
       const farmaciasGrupo = await db

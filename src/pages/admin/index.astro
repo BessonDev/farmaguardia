@@ -6,6 +6,7 @@ import { db } from '../../db';
 import { farmacias, turnos, reportes, visitas, configGrupos } from '../../db/schema';
 import { eq, and, gte, lte, sql, gt } from 'drizzle-orm';
 import { toUtcISO, nowUtc, formatCaracasDateTime, utcToCaracas } from '../../utils/time';
+import { fechaCaracasHoy, grupoParaFecha } from '../../utils/grupos';
 
 const resultTelegram = Astro.getActionResult(actions.testTelegram);
 const resultConfigGrupos = Astro.getActionResult(actions.guardarConfigGrupos);
@@ -16,12 +17,11 @@ const configGruposRow = (await db.select().from(configGrupos).limit(1))[0] ?? nu
 let grupoActual: number | null = null;
 let totalGrupos: number | null = null;
 if (configGruposRow) {
-  const [y, m, d] = configGruposRow.fechaInicio.split('-').map(Number);
-  const fechaInicio = new Date(Date.UTC(y, m - 1, d));
-  const hoy = new Date();
-  hoy.setUTCHours(0, 0, 0, 0);
-  const diasDiff = Math.floor((hoy.getTime() - fechaInicio.getTime()) / (1000 * 60 * 60 * 24));
-  grupoActual = (diasDiff % configGruposRow.cantidadGrupos) + 1;
+  grupoActual = grupoParaFecha({
+    fechaInicio: configGruposRow.fechaInicio,
+    cantidadGrupos: configGruposRow.cantidadGrupos,
+    fecha: fechaCaracasHoy(),
+  });
   totalGrupos = configGruposRow.cantidadGrupos;
 }
 
